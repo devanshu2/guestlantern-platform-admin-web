@@ -180,8 +180,7 @@ function metrics(): RuntimeMetricsReport {
 }
 
 function jobStatus(jobId: string): ProvisionRestaurantJobStatus {
-  const summary =
-    jobSummaries.find((job) => job.job_id === jobId) ?? jobSummaries[0];
+  const summary = jobSummaries.find((job) => job.job_id === jobId) ?? jobSummaries[0];
   const failed = summary.job_status === "failed";
   const succeeded = summary.job_status === "succeeded";
 
@@ -203,11 +202,34 @@ function jobStatus(jobId: string): ProvisionRestaurantJobStatus {
     last_heartbeat_at: summary.last_heartbeat_at,
     claim_expires_at: summary.claim_expires_at,
     steps: [
-      { step_key: "restaurant_record", step_order: 1, step_status: "succeeded", started_at: now, finished_at: now },
-      { step_key: "domains", step_order: 2, step_status: "succeeded", started_at: now, finished_at: now },
-      { step_key: "database_config", step_order: 3, step_status: failed ? "failed" : "succeeded", started_at: now, finished_at: now, error_message: failed ? "PgBouncer reload failed in mock data." : undefined },
+      {
+        step_key: "restaurant_record",
+        step_order: 1,
+        step_status: "succeeded",
+        started_at: now,
+        finished_at: now
+      },
+      {
+        step_key: "domains",
+        step_order: 2,
+        step_status: "succeeded",
+        started_at: now,
+        finished_at: now
+      },
+      {
+        step_key: "database_config",
+        step_order: 3,
+        step_status: failed ? "failed" : "succeeded",
+        started_at: now,
+        finished_at: now,
+        error_message: failed ? "PgBouncer reload failed in mock data." : undefined
+      },
       { step_key: "auth_config", step_order: 4, step_status: succeeded ? "succeeded" : "pending" },
-      { step_key: "runtime_receipt", step_order: 5, step_status: succeeded ? "succeeded" : "pending" }
+      {
+        step_key: "runtime_receipt",
+        step_order: 5,
+        step_status: succeeded ? "succeeded" : "pending"
+      }
     ],
     receipt: succeeded
       ? {
@@ -217,7 +239,8 @@ function jobStatus(jobId: string): ProvisionRestaurantJobStatus {
           database_password_secret_ref: databaseConfig.db_password_secret_ref,
           garage_bucket: "gl-local-tenant-smoke-provisioned",
           garage_access_key_id_secret_ref: "secret://smoke-provisioned-garage-access-key-id",
-          garage_secret_access_key_secret_ref: "secret://smoke-provisioned-garage-secret-access-key",
+          garage_secret_access_key_secret_ref:
+            "secret://smoke-provisioned-garage-secret-access-key",
           dragonfly_admin_user_secret_ref: "secret://smoke-provisioned-dragonfly-admin-user",
           dragonfly_client_user_secret_ref: "secret://smoke-provisioned-dragonfly-client-user",
           schema_version: databaseConfig.schema_version ?? "restaurant_template/0001_init.sql",
@@ -288,7 +311,8 @@ function operationalSummary(): RestaurantOperationalSummary {
       garage_bucket: "gl-local-tenant-smoke-provisioned",
       active_garage_key_name: "tenant-smoke-provisioned-runtime",
       active_garage_access_key_id_secret_ref: "secret://smoke-provisioned-garage-access-key-id",
-      active_garage_secret_access_key_secret_ref: "secret://smoke-provisioned-garage-secret-access-key",
+      active_garage_secret_access_key_secret_ref:
+        "secret://smoke-provisioned-garage-secret-access-key",
       active_dragonfly_admin_user_secret_ref: "secret://smoke-provisioned-dragonfly-admin-user",
       active_dragonfly_client_user_secret_ref: "secret://smoke-provisioned-dragonfly-client-user",
       last_reenabled_at: now,
@@ -362,9 +386,7 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     const receipt: ProvisionRestaurantJobReceipt = {
       job_id: "job-new-001",
       tenant_id:
-        typeof body.tenant_id === "string" && body.tenant_id
-          ? body.tenant_id
-          : restaurantId,
+        typeof body.tenant_id === "string" && body.tenant_id ? body.tenant_id : restaurantId,
       slug,
       public_host: `${slug}.guestlantern.localhost`,
       admin_host: `admin.${slug}.guestlantern.localhost`,
@@ -375,9 +397,7 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
 
   if (method === "GET" && routePath === "/platform/restaurants/provisioning-jobs") {
     const status = url.searchParams.get("status");
-    const items = status
-      ? jobSummaries.filter((job) => job.job_status === status)
-      : jobSummaries;
+    const items = status ? jobSummaries.filter((job) => job.job_status === status) : jobSummaries;
     const page: Page<ProvisionRestaurantJobSummary> = {
       items,
       page: Number(url.searchParams.get("page") ?? 1),
@@ -401,7 +421,9 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     return json(page);
   }
 
-  const jobMatch = routePath.match(/^\/platform\/restaurants\/provisioning-jobs\/([^/]+)(?:\/([^/]+))?$/);
+  const jobMatch = routePath.match(
+    /^\/platform\/restaurants\/provisioning-jobs\/([^/]+)(?:\/([^/]+))?$/
+  );
   if (jobMatch) {
     const [, jobId, action] = jobMatch;
     if (method === "GET" && action === "timeline") {
@@ -421,7 +443,9 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     }
   }
 
-  const restaurantMatch = routePath.match(/^\/platform\/restaurants\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
+  const restaurantMatch = routePath.match(
+    /^\/platform\/restaurants\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/
+  );
   if (restaurantMatch) {
     const [, id, resource, nested] = restaurantMatch;
     if (id !== restaurantId && !id.match(/^[0-9a-f-]{36}$/i)) {

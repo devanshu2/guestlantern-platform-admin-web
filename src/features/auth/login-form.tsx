@@ -60,7 +60,12 @@ export function LoginForm() {
         helper="Enter the platform-admin password configured in the control plane. This app never stores it in browser storage."
         required
       />
-      <Button type="submit" loading={loading} icon={<LogIn aria-hidden className="h-4 w-4" />} className="w-full">
+      <Button
+        type="submit"
+        loading={loading}
+        icon={<LogIn aria-hidden className="h-4 w-4" />}
+        className="w-full"
+      >
         Sign in
       </Button>
     </form>

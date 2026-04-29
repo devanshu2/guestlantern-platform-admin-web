@@ -10,6 +10,7 @@ import {
 } from "@/lib/security/cookies";
 import { createCsrfToken, verifyCsrf } from "@/lib/security/csrf";
 import { mockPlatformApi } from "@/lib/server/mock-platform-api";
+import { serverLogger } from "@/lib/server/logger";
 import type { PlatformAdminAuthTokens } from "@/lib/api/types";
 
 type PlatformFetchOptions = {
@@ -48,16 +49,22 @@ export async function platformFetch(
   options: PlatformFetchOptions = {}
 ): Promise<Response> {
   const env = getServerEnv();
+  const method = options.method ?? request.method;
+  const startedAt = Date.now();
 
   if (env.PLATFORM_ADMIN_API_MOCK) {
-    return mockPlatformApi(request, path);
+    const response = await mockPlatformApi(request, path);
+    serverLogger.debug("platform_api.mock_response", {
+      method,
+      path,
+      status: response.status,
+      duration_ms: Date.now() - startedAt
+    });
+    return response;
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    env.PLATFORM_ADMIN_REQUEST_TIMEOUT_MS
-  );
+  const timeout = setTimeout(() => controller.abort(), env.PLATFORM_ADMIN_REQUEST_TIMEOUT_MS);
 
   const headers = new Headers();
   if (options.contentType !== null) {
@@ -70,13 +77,28 @@ export async function platformFetch(
   if (userAgent) headers.set("user-agent", userAgent);
 
   try {
-    return await fetch(new URL(path, env.PLATFORM_ADMIN_API_BASE_URL), {
-      method: options.method ?? request.method,
+    const response = await fetch(new URL(path, env.PLATFORM_ADMIN_API_BASE_URL), {
+      method,
       body: options.body,
       headers,
       signal: controller.signal,
       cache: "no-store"
     });
+    serverLogger.debug("platform_api.response", {
+      method,
+      path,
+      status: response.status,
+      duration_ms: Date.now() - startedAt
+    });
+    return response;
+  } catch (error) {
+    serverLogger.error("platform_api.request_failed", {
+      method,
+      path,
+      duration_ms: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : "unknown_error"
+    });
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -120,6 +142,10 @@ export async function proxyPlatformRequest(
   platformPath: string
 ): Promise<NextResponse> {
   if (!verifyCsrf(request)) {
+    serverLogger.warn("platform_api.csrf_rejected", {
+      method: request.method,
+      path: platformPath
+    });
     return NextResponse.json(
       {
         error: {
@@ -131,9 +157,7 @@ export async function proxyPlatformRequest(
     );
   }
 
-  const body = request.method === "GET" || request.method === "HEAD"
-    ? null
-    : await request.text();
+  const body = request.method === "GET" || request.method === "HEAD" ? null : await request.text();
   const contentType = request.headers.get("content-type");
   const requestPath = appendSearch(platformPath, request.nextUrl.search);
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;

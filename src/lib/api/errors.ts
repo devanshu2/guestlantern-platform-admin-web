@@ -15,10 +15,7 @@ export class ApiError extends Error {
 export function isErrorBody(value: unknown): value is HttpErrorBody {
   if (!value || typeof value !== "object") return false;
   const body = value as { error?: { code?: unknown; message?: unknown } };
-  return (
-    typeof body.error?.code === "string" &&
-    typeof body.error?.message === "string"
-  );
+  return typeof body.error?.code === "string" && typeof body.error?.message === "string";
 }
 
 export function normalizeError(status: number, body: unknown): ApiError {

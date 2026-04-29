@@ -88,7 +88,13 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               <p className="truncate text-xs text-muted">{admin?.email}</p>
               <p className="mt-1 text-xs text-muted">Role: {admin?.role ?? "unknown"}</p>
             </div>
-            <Button type="button" variant="secondary" icon={<LogOut aria-hidden className="h-4 w-4" />} className="w-full" onClick={onLogout}>
+            <Button
+              type="button"
+              variant="secondary"
+              icon={<LogOut aria-hidden className="h-4 w-4" />}
+              className="w-full"
+              onClick={onLogout}
+            >
               Sign out
             </Button>
           </div>
@@ -99,10 +105,27 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
           <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">Control Plane</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                Control Plane
+              </p>
               <h1 className="text-lg font-semibold text-ink">Platform operations</h1>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden rounded-md bg-slate-50 px-3 py-2 text-xs text-muted sm:block lg:hidden">
+                <span className="block font-medium text-ink">
+                  {admin?.display_name ?? "Operator"}
+                </span>
+                <span className="block max-w-48 truncate">{admin?.email}</span>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                icon={<LogOut aria-hidden className="h-4 w-4" />}
+                className="lg:hidden"
+                onClick={onLogout}
+              >
+                Sign out
+              </Button>
               <Link
                 href="/dashboard#lookup"
                 className="inline-flex min-h-10 items-center gap-2 border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-slate-50"
@@ -121,7 +144,10 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-t border-line px-2 py-2 lg:hidden" aria-label="Mobile navigation">
+          <nav
+            className="flex gap-1 overflow-x-auto border-t border-line px-2 py-2 lg:hidden"
+            aria-label="Mobile navigation"
+          >
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;

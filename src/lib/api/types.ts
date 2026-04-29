@@ -79,19 +79,9 @@ export type RuntimeMetricsReport = {
   counters: RuntimeCounter[];
 };
 
-export type ProvisioningJobStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled";
+export type ProvisioningJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
-export type ProvisioningStepStatus =
-  | "pending"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "skipped";
+export type ProvisioningStepStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
 
 export type ProvisionRestaurantRequest = {
   tenant_id?: TenantId;

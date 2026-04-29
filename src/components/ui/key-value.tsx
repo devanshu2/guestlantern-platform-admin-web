@@ -1,8 +1,4 @@
-export function KeyValue({
-  items
-}: {
-  items: Array<{ label: string; value: React.ReactNode }>;
-}) {
+export function KeyValue({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (

@@ -1,5 +1,9 @@
 import { getServerEnv } from "@/lib/config/env";
-export { ACCESS_TOKEN_COOKIE, CSRF_COOKIE, REFRESH_TOKEN_COOKIE } from "@/lib/security/cookie-names";
+export {
+  ACCESS_TOKEN_COOKIE,
+  CSRF_COOKIE,
+  REFRESH_TOKEN_COOKIE
+} from "@/lib/security/cookie-names";
 
 type CookieOptions = {
   httpOnly?: boolean;

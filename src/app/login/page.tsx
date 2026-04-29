@@ -9,7 +9,8 @@ export default function LoginPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted">GuestLantern</p>
           <h1 className="mt-1 text-xl font-semibold text-ink">Platform Admin</h1>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Sign in to operate the control plane for tenant provisioning, repair, audit, and runtime diagnostics.
+            Sign in to operate the control plane for tenant provisioning, repair, audit, and runtime
+            diagnostics.
           </p>
         </div>
         <div className="p-5">

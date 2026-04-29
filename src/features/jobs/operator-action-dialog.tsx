@@ -10,28 +10,40 @@ import { errorMessage } from "@/lib/api/errors";
 
 export type OperatorAction = "retry" | "cancel" | "requeue" | "force-fail";
 
-const actionCopy: Record<OperatorAction, { title: string; description: string; needsReason: boolean; variant: "primary" | "danger" | "secondary" }> = {
+const actionCopy: Record<
+  OperatorAction,
+  {
+    title: string;
+    description: string;
+    needsReason: boolean;
+    variant: "primary" | "danger" | "secondary";
+  }
+> = {
   retry: {
     title: "Retry failed job",
-    description: "Creates a fresh queued job from a failed source job. The failed source job remains unchanged for audit.",
+    description:
+      "Creates a fresh queued job from a failed source job. The failed source job remains unchanged for audit.",
     needsReason: false,
     variant: "primary"
   },
   cancel: {
     title: "Cancel job",
-    description: "Cancels a queued or running job in place. Use this when an operator deliberately wants the current attempt to stop.",
+    description:
+      "Cancels a queued or running job in place. Use this when an operator deliberately wants the current attempt to stop.",
     needsReason: true,
     variant: "danger"
   },
   requeue: {
     title: "Requeue job",
-    description: "Moves a failed, cancelled, queued, or expired running job back to queued. Active running leases are rejected by the backend.",
+    description:
+      "Moves a failed, cancelled, queued, or expired running job back to queued. Active running leases are rejected by the backend.",
     needsReason: true,
     variant: "secondary"
   },
   "force-fail": {
     title: "Force fail job",
-    description: "Marks a queued or running job failed in place. Use only when the current attempt cannot continue safely.",
+    description:
+      "Marks a queued or running job failed in place. Use only when the current attempt cannot continue safely.",
     needsReason: true,
     variant: "danger"
   }
@@ -77,7 +89,10 @@ export function OperatorActionDialog({
         {copy.title}
       </Button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          role="presentation"
+        >
           <form
             className="panel w-full max-w-lg"
             role="dialog"
@@ -106,7 +121,8 @@ export function OperatorActionDialog({
                 />
               ) : (
                 <Alert tone="info">
-                  Retry does not accept a reason in the current backend contract. The new job will be linked to the failed source through backend audit history.
+                  Retry does not accept a reason in the current backend contract. The new job will
+                  be linked to the failed source through backend audit history.
                 </Alert>
               )}
             </div>

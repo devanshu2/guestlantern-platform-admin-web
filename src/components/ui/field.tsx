@@ -34,8 +34,16 @@ export function Field({
         aria-invalid={Boolean(error)}
         {...props}
       />
-      {helper ? <p id={helperId} className="helper">{helper}</p> : null}
-      {error ? <p id={errorId} className="mt-1 text-xs font-medium text-danger">{error}</p> : null}
+      {helper ? (
+        <p id={helperId} className="helper">
+          {helper}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -62,8 +70,16 @@ export function TextAreaField({
         aria-invalid={Boolean(error)}
         {...props}
       />
-      {helper ? <p id={helperId} className="helper">{helper}</p> : null}
-      {error ? <p id={errorId} className="mt-1 text-xs font-medium text-danger">{error}</p> : null}
+      {helper ? (
+        <p id={helperId} className="helper">
+          {helper}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -93,8 +109,16 @@ export function SelectField({
       >
         {children}
       </select>
-      {helper ? <p id={helperId} className="helper">{helper}</p> : null}
-      {error ? <p id={errorId} className="mt-1 text-xs font-medium text-danger">{error}</p> : null}
+      {helper ? (
+        <p id={helperId} className="helper">
+          {helper}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

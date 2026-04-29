@@ -71,14 +71,62 @@ export function AuthConfigForm({
 
   return (
     <form className="space-y-4" onSubmit={submit}>
-      {message ? <Alert tone={message.includes("saved") ? "success" : "danger"} live>{message}</Alert> : null}
+      {message ? (
+        <Alert tone={message.includes("saved") ? "success" : "danger"} live>
+          {message}
+        </Alert>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Issuer" name="issuer" value={form.issuer} onChange={(event) => update("issuer", event.target.value)} helper="Tenant token issuer host. Example: smoke-provisioned.guestlantern.localhost." required />
-        <Field label="Audience" name="audience" value={form.audience} onChange={(event) => update("audience", event.target.value)} helper="Tenant token audience. Example: tenant-smoke-provisioned-clients." required />
-        <Field label="Signing algorithm" name="signing_algorithm" value={form.signing_algorithm} onChange={(event) => update("signing_algorithm", event.target.value)} helper="Current backend supports HS256." required />
-        <Field label="JWT secret ref" name="jwt_secret_ref" value={form.jwt_secret_ref} onChange={(event) => update("jwt_secret_ref", event.target.value)} helper="Secret reference only. Example: secret://smoke-provisioned-jwt-secret." required />
-        <Field label="Access token TTL seconds" name="access_token_ttl_seconds" type="number" value={form.access_token_ttl_seconds} onChange={(event) => update("access_token_ttl_seconds", event.target.value)} helper="Minimum 60 seconds. Common operator default: 900." required />
-        <Field label="Refresh token TTL seconds" name="refresh_token_ttl_seconds" type="number" value={form.refresh_token_ttl_seconds} onChange={(event) => update("refresh_token_ttl_seconds", event.target.value)} helper="Must be greater than access TTL. Example: 2592000." required />
+        <Field
+          label="Issuer"
+          name="issuer"
+          value={form.issuer}
+          onChange={(event) => update("issuer", event.target.value)}
+          helper="Tenant token issuer host. Example: smoke-provisioned.guestlantern.localhost."
+          required
+        />
+        <Field
+          label="Audience"
+          name="audience"
+          value={form.audience}
+          onChange={(event) => update("audience", event.target.value)}
+          helper="Tenant token audience. Example: tenant-smoke-provisioned-clients."
+          required
+        />
+        <Field
+          label="Signing algorithm"
+          name="signing_algorithm"
+          value={form.signing_algorithm}
+          onChange={(event) => update("signing_algorithm", event.target.value)}
+          helper="Current backend supports HS256."
+          required
+        />
+        <Field
+          label="JWT secret ref"
+          name="jwt_secret_ref"
+          value={form.jwt_secret_ref}
+          onChange={(event) => update("jwt_secret_ref", event.target.value)}
+          helper="Secret reference only. Example: secret://smoke-provisioned-jwt-secret."
+          required
+        />
+        <Field
+          label="Access token TTL seconds"
+          name="access_token_ttl_seconds"
+          type="number"
+          value={form.access_token_ttl_seconds}
+          onChange={(event) => update("access_token_ttl_seconds", event.target.value)}
+          helper="Minimum 60 seconds. Common operator default: 900."
+          required
+        />
+        <Field
+          label="Refresh token TTL seconds"
+          name="refresh_token_ttl_seconds"
+          type="number"
+          value={form.refresh_token_ttl_seconds}
+          onChange={(event) => update("refresh_token_ttl_seconds", event.target.value)}
+          helper="Must be greater than access TTL. Example: 2592000."
+          required
+        />
       </div>
       <CheckboxField
         label="Allow development static OTP"

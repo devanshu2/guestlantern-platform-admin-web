@@ -59,7 +59,11 @@ export function DomainForm({
 
   return (
     <form className="space-y-3" onSubmit={submit}>
-      {message ? <Alert tone={message.includes("created") ? "success" : "danger"} live>{message}</Alert> : null}
+      {message ? (
+        <Alert tone={message.includes("created") ? "success" : "danger"} live>
+          {message}
+        </Alert>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-[1fr_180px]">
         <Field
           label="Host"

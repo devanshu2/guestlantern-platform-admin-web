@@ -14,20 +14,14 @@ export const slugSchema = z
   .string()
   .trim()
   .min(3, "Use at least 3 characters.")
-  .regex(
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    "Use lower-kebab format, for example smoke-provisioned."
-  );
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lower-kebab format, for example smoke-provisioned.");
 
 export const hostSchema = z
   .string()
   .trim()
   .toLowerCase()
   .min(3, "Enter a hostname.")
-  .regex(
-    /^[a-z0-9.-]+$/,
-    "Use a lowercase hostname with letters, numbers, dots, and hyphens."
-  );
+  .regex(/^[a-z0-9.-]+$/, "Use a lowercase hostname with letters, numbers, dots, and hyphens.");
 
 export const secretRefSchema = z
   .string()
@@ -78,27 +72,29 @@ export const databaseConfigSchema = z.object({
   connection_options: z.record(z.string(), z.unknown()).default({})
 });
 
-export const authConfigSchema = z.object({
-  issuer: hostSchema,
-  audience: z.string().trim().min(1, "Audience is required."),
-  signing_algorithm: z.literal("HS256", {
-    message: "The current backend supports HS256."
-  }),
-  jwt_secret_ref: secretRefSchema,
-  access_token_ttl_seconds: z.coerce.number().int().min(60),
-  refresh_token_ttl_seconds: z.coerce.number().int().min(61),
-  allow_dev_static_otp: z.boolean(),
-  dev_static_otp_code: z.preprocess(
-    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-    z.string().regex(/^\d{6}$/, "Use a 6 digit static OTP.").optional()
-  )
-}).refine(
-  (value) => value.refresh_token_ttl_seconds > value.access_token_ttl_seconds,
-  {
+export const authConfigSchema = z
+  .object({
+    issuer: hostSchema,
+    audience: z.string().trim().min(1, "Audience is required."),
+    signing_algorithm: z.literal("HS256", {
+      message: "The current backend supports HS256."
+    }),
+    jwt_secret_ref: secretRefSchema,
+    access_token_ttl_seconds: z.coerce.number().int().min(60),
+    refresh_token_ttl_seconds: z.coerce.number().int().min(61),
+    allow_dev_static_otp: z.boolean(),
+    dev_static_otp_code: z.preprocess(
+      (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+      z
+        .string()
+        .regex(/^\d{6}$/, "Use a 6 digit static OTP.")
+        .optional()
+    )
+  })
+  .refine((value) => value.refresh_token_ttl_seconds > value.access_token_ttl_seconds, {
     path: ["refresh_token_ttl_seconds"],
     message: "Refresh token TTL must be greater than access token TTL."
-  }
-);
+  });
 
 export function parseJsonObject(value: string): Record<string, unknown> {
   const trimmed = value.trim();

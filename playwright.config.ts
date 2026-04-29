@@ -1,34 +1,50 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const e2eProfile = process.env.PLATFORM_ADMIN_E2E_PROFILE ?? "mocked";
+const webHost = process.env.PLATFORM_ADMIN_WEB_HOSTNAME ?? "127.0.0.1";
+const webPort = Number(
+  process.env.PLATFORM_ADMIN_WEB_PORT ?? (e2eProfile === "development" ? 3101 : 3100)
+);
+const baseURL = `http://${webHost}:${webPort}`;
+const webServerEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string"
+  )
+);
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
+  workers: e2eProfile === "development" ? 1 : undefined,
   expect: {
     timeout: 8_000
   },
   use: {
-    baseURL: "http://127.0.0.1:3100",
+    baseURL,
     trace: "on-first-retry"
   },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100/login",
-    reuseExistingServer: !process.env.CI,
-    env: {
-      PLATFORM_ADMIN_API_MOCK: "1",
-      PLATFORM_ADMIN_API_BASE_URL: "http://127.0.0.1:8080",
-      PLATFORM_ADMIN_COOKIE_SECURE: "false",
-      NEXT_PUBLIC_JOB_POLL_INTERVAL_MS: "1000"
-    }
+    command: `node scripts/run-next.mjs dev ${e2eProfile}`,
+    url: `${baseURL}/login`,
+    reuseExistingServer: false,
+    env: webServerEnv
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
-    },
-    {
-      name: "mobile",
-      use: { ...devices["Pixel 7"] }
-    }
-  ]
+  projects:
+    e2eProfile === "development"
+      ? [
+          {
+            name: "chromium",
+            use: { ...devices["Desktop Chrome"] }
+          }
+        ]
+      : [
+          {
+            name: "chromium",
+            use: { ...devices["Desktop Chrome"] }
+          },
+          {
+            name: "mobile",
+            use: { ...devices["Pixel 7"] }
+          }
+        ]
 });

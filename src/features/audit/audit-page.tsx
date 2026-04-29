@@ -28,7 +28,9 @@ export function AuditPage() {
     setEvents(null);
 
     if (!jobId.trim() && !restaurantId.trim()) {
-      setMessage("Enter a job ID, restaurant UUID, or both. The backend rejects unscoped audit reads.");
+      setMessage(
+        "Enter a job ID, restaurant UUID, or both. The backend rejects unscoped audit reads."
+      );
       return;
     }
     if (restaurantId.trim()) {
@@ -62,11 +64,15 @@ export function AuditPage() {
         <p className="text-xs font-medium uppercase tracking-wide text-muted">Provisioning audit</p>
         <h1 className="text-2xl font-semibold text-ink">Audit events</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Search provisioning audit history by job ID, restaurant UUID, or both. Unscoped audit browsing is intentionally blocked by the backend.
+          Search provisioning audit history by job ID, restaurant UUID, or both. Unscoped audit
+          browsing is intentionally blocked by the backend.
         </p>
       </section>
 
-      <Panel title="Audit filters" description="Use precise identifiers from job detail, restaurant summary, support tickets, or external operator records.">
+      <Panel
+        title="Audit filters"
+        description="Use precise identifiers from job detail, restaurant summary, support tickets, or external operator records."
+      >
         <form className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-start" onSubmit={search}>
           <Field
             label="Job ID"
@@ -82,7 +88,12 @@ export function AuditPage() {
             onChange={(event) => setRestaurantId(event.target.value)}
             helper="Optional when job ID is present. Example: 33333333-3333-4333-8333-333333333333."
           />
-          <Button type="submit" loading={loading} className="lg:mt-6" icon={<Search aria-hidden className="h-4 w-4" />}>
+          <Button
+            type="submit"
+            loading={loading}
+            className="lg:mt-6"
+            icon={<Search aria-hidden className="h-4 w-4" />}
+          >
             Search
           </Button>
         </form>
@@ -95,7 +106,10 @@ export function AuditPage() {
         ) : null}
       </Panel>
 
-      <Panel title="Results" description="Audit events include actor metadata when available, backend event type, success flag, message, and structured metadata.">
+      <Panel
+        title="Results"
+        description="Audit events include actor metadata when available, backend event type, success flag, message, and structured metadata."
+      >
         {events ? (
           events.items.length > 0 ? (
             <ol className="space-y-3">
@@ -106,12 +120,26 @@ export function AuditPage() {
                     <span className="font-mono text-xs text-ink">{event.event_type}</span>
                     <span className="text-xs text-muted">{formatDateTime(event.created_at)}</span>
                   </div>
-                  <p className="mt-2 text-sm text-ink">{event.event_message ?? "No event message recorded."}</p>
+                  <p className="mt-2 text-sm text-ink">
+                    {event.event_message ?? "No event message recorded."}
+                  </p>
                   <dl className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-2">
-                    <div><dt className="font-medium text-ink">Actor</dt><dd>{event.actor_email ?? "system or unavailable"}</dd></div>
-                    <div><dt className="font-medium text-ink">Restaurant</dt><dd className="break-all">{event.target_restaurant_id ?? "Not scoped"}</dd></div>
-                    <div><dt className="font-medium text-ink">Job</dt><dd className="break-all">{event.provisioning_job_id ?? "Not scoped"}</dd></div>
-                    <div><dt className="font-medium text-ink">IP</dt><dd>{event.ip_address ?? "Not recorded"}</dd></div>
+                    <div>
+                      <dt className="font-medium text-ink">Actor</dt>
+                      <dd>{event.actor_email ?? "system or unavailable"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-ink">Restaurant</dt>
+                      <dd className="break-all">{event.target_restaurant_id ?? "Not scoped"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-ink">Job</dt>
+                      <dd className="break-all">{event.provisioning_job_id ?? "Not scoped"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-ink">IP</dt>
+                      <dd>{event.ip_address ?? "Not recorded"}</dd>
+                    </div>
                   </dl>
                   <pre className="mt-3 overflow-x-auto rounded-md bg-white p-3 text-xs text-ink">
                     {JSON.stringify(event.metadata, null, 2)}

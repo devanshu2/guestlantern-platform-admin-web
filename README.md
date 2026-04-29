@@ -29,42 +29,74 @@ Planning docs used:
 
 ```sh
 npm install
+npm run dev:mocked
+```
+
+Default app URL: `http://127.0.0.1:3000`
+
+The development profile expects the Dockerized backend on `http://127.0.0.1:18080`:
+
+```sh
+npm run backend:docker:platform:up
 npm run dev
 ```
 
-Default app URL: `http://localhost:3000`
+Override the web port without changing scripts:
 
-Default backend URL: `http://127.0.0.1:8080`
+```sh
+PLATFORM_ADMIN_WEB_PORT=3200 npm run dev:mocked
+PORT=3201 npm run dev
+```
+
+## Runtime Profiles
+
+| Profile       | Script               | Backend                                          | Logging |
+| ------------- | -------------------- | ------------------------------------------------ | ------- |
+| `mocked`      | `npm run dev:mocked` | Built-in current-contract mock                   | `debug` |
+| `development` | `npm run dev`        | Docker/local backend at `http://127.0.0.1:18080` | `debug` |
+| `production`  | `npm run start`      | Configured production API URL                    | `info`  |
+
+Profile files live in `env/`. Production deployments should override `env/production.env` values through the deployment environment or secret manager.
 
 ## Environment Variables
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `PLATFORM_ADMIN_API_BASE_URL` | `http://127.0.0.1:8080` | Server-side backend base URL. |
-| `PLATFORM_ADMIN_API_MOCK` | `0` | Set to `1` for current-contract mock backend in tests/dev. |
-| `PLATFORM_ADMIN_COOKIE_SECURE` | production-dependent | Set secure cookie flag explicitly for local HTTPS/proxy setups. |
-| `PLATFORM_ADMIN_COOKIE_DOMAIN` | unset | Optional shared cookie domain. |
-| `PLATFORM_ADMIN_REQUEST_TIMEOUT_MS` | `15000` | Backend request timeout. |
-| `PLATFORM_ADMIN_DEFAULT_PAGE_SIZE` | `25` | Default server-side page size. |
-| `NEXT_PUBLIC_JOB_POLL_INTERVAL_MS` | `5000` | Browser polling interval for active jobs. |
+| Variable                            | Default              | Purpose                                                                          |
+| ----------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| `PLATFORM_ADMIN_ENVIRONMENT`        | `development`        | Runtime profile: `development`, `production`, or `mocked`.                       |
+| `PLATFORM_ADMIN_LOG_LEVEL`          | profile-dependent    | Server-side structured log level: `debug`, `info`, `warn`, `error`, or `silent`. |
+| `PLATFORM_ADMIN_WEB_HOSTNAME`       | `127.0.0.1`          | Host passed to `next dev`/`next start` by profile scripts.                       |
+| `PLATFORM_ADMIN_WEB_PORT` / `PORT`  | `3000`               | Configurable web port. `PORT` is honored as a fallback.                          |
+| `PLATFORM_ADMIN_API_BASE_URL`       | profile-dependent    | Server-side backend base URL.                                                    |
+| `PLATFORM_ADMIN_API_MODE`           | `real`               | `real` or `mock`; `mock` enables the current-contract mock adapter.              |
+| `PLATFORM_ADMIN_API_MOCK`           | `0`                  | Backward-compatible boolean mock switch.                                         |
+| `PLATFORM_ADMIN_COOKIE_SECURE`      | production-dependent | Set secure cookie flag explicitly for local HTTPS/proxy setups.                  |
+| `PLATFORM_ADMIN_COOKIE_DOMAIN`      | unset                | Optional shared cookie domain.                                                   |
+| `PLATFORM_ADMIN_REQUEST_TIMEOUT_MS` | `15000`              | Backend request timeout.                                                         |
+| `PLATFORM_ADMIN_DEFAULT_PAGE_SIZE`  | `25`                 | Default server-side page size.                                                   |
+| `NEXT_PUBLIC_JOB_POLL_INTERVAL_MS`  | `5000`               | Browser polling interval for active jobs.                                        |
 
 ## Verification
 
 ```sh
 npm run lint
+npm run format:check
 npm run typecheck
 npm test
 npm run build
-npm run test:e2e
+npm run test:e2e:mocked
+npm run test:e2e:backend
 ```
 
-For backend-assisted verification, start the platform admin API first from `../backend` and run its smoke gate:
+`npm run test:e2e:backend` starts the Dockerized platform-admin-api through `../backend/compose.yml`, waits for `/health/ready`, then runs a real browser provisioning/audit/logout smoke through the BFF.
+
+By default, the Docker helper reuses the existing `guestlantern-backend-local` image. Set `PLATFORM_ADMIN_BACKEND_DOCKER_BUILD=1` when you need to force a backend image rebuild.
+
+For backend API-only verification, run the backend smoke gate:
 
 ```sh
+cd ../backend
 make smoke-platform-admin-api
 ```
-
-Then run the web app without mock mode and exercise login, provisioning, jobs, summaries, and audit.
 
 ## Security Notes
 

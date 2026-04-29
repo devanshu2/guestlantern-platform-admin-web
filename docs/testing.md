@@ -17,10 +17,10 @@ Coverage includes:
 ## Browser Tests
 
 ```sh
-npm run test:e2e
+npm run test:e2e:mocked
 ```
 
-Playwright starts the app with `PLATFORM_ADMIN_API_MOCK=1`. The mock adapter implements the current platform-admin contract only; it does not invent future lifecycle routes.
+Playwright starts the app with the `mocked` profile. The mock adapter implements the current platform-admin contract only; it does not invent future lifecycle routes. The mocked suite runs on Chromium desktop and Pixel 7 mobile.
 
 Browser scenarios cover:
 
@@ -31,11 +31,19 @@ Browser scenarios cover:
 - Restaurant summary and infra prepare.
 - Scoped audit search.
 
-## Backend-Assisted Smoke
+## Backend-Assisted Browser Smoke
 
-For real backend verification:
+```sh
+npm run test:e2e:backend
+```
 
-1. Start the platform admin backend from `../backend`.
-2. Run `make smoke-platform-admin-api` from the backend repo.
-3. Run this app with `PLATFORM_ADMIN_API_MOCK=0`.
-4. Exercise login, provisioning, jobs, summary repair, and audit flows in a browser.
+This script:
+
+1. Starts Docker infrastructure and the Dockerized `platform-admin-api` from `../backend/compose.yml`.
+2. Waits for `http://127.0.0.1:18080/health/ready`.
+3. Starts the Next app with the `development` profile on a configurable test port.
+4. Runs a real browser flow through login, provisioning, job detail, restaurant summary, infra prepare, audit search, and logout.
+
+The backend-assisted suite uses a unique restaurant UUID and slug per run. It intentionally runs one Chromium project to avoid concurrent writes to local tenant infra while still exercising a real browser and the real BFF/backend contract.
+
+The Docker helper reuses the existing `guestlantern-backend-local` image when available. Set `PLATFORM_ADMIN_BACKEND_DOCKER_BUILD=1 npm run test:e2e:backend` to force a rebuild.

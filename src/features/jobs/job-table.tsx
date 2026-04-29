@@ -31,15 +31,24 @@ export function JobTable({ jobs }: { jobs: ProvisionRestaurantJobSummary[] }) {
               <td className="border-b border-line px-3 py-3 align-top">
                 <div className="font-medium text-ink">{job.display_name}</div>
                 <div className="mt-1 text-xs text-muted">{job.slug}</div>
-                <div className="mt-1 max-w-xs truncate font-mono text-xs text-muted">{job.tenant_id}</div>
+                <div className="mt-1 max-w-xs truncate font-mono text-xs text-muted">
+                  {job.tenant_id}
+                </div>
               </td>
               <td className="border-b border-line px-3 py-3 align-top">
                 <StatusBadge status={job.job_status} />
-                {job.error_message ? <p className="mt-2 max-w-xs text-xs text-danger">{job.error_message}</p> : null}
+                {job.error_message ? (
+                  <p className="mt-2 max-w-xs text-xs text-danger">{job.error_message}</p>
+                ) : null}
               </td>
               <td className="w-52 border-b border-line px-3 py-3 align-top">
-                <ProgressBar value={stepProgress(job.succeeded_step_count, job.step_count)} label={`${job.succeeded_step_count}/${job.step_count} steps`} />
-                {job.failed_step_count > 0 ? <p className="mt-1 text-xs text-danger">{job.failed_step_count} failed step</p> : null}
+                <ProgressBar
+                  value={stepProgress(job.succeeded_step_count, job.step_count)}
+                  label={`${job.succeeded_step_count}/${job.step_count} steps`}
+                />
+                {job.failed_step_count > 0 ? (
+                  <p className="mt-1 text-xs text-danger">{job.failed_step_count} failed step</p>
+                ) : null}
               </td>
               <td className="border-b border-line px-3 py-3 align-top text-xs text-muted">
                 {job.claimed_by ? (
@@ -51,13 +60,21 @@ export function JobTable({ jobs }: { jobs: ProvisionRestaurantJobSummary[] }) {
                   "Unclaimed"
                 )}
               </td>
-              <td className="border-b border-line px-3 py-3 align-top text-xs text-muted">{formatDateTime(job.updated_at)}</td>
+              <td className="border-b border-line px-3 py-3 align-top text-xs text-muted">
+                {formatDateTime(job.updated_at)}
+              </td>
               <td className="border-b border-line px-3 py-3 align-top">
                 <div className="flex flex-col gap-2">
-                  <Link className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline" href={`/jobs/${job.job_id}`}>
+                  <Link
+                    className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+                    href={`/jobs/${job.job_id}`}
+                  >
                     Job <ExternalLink aria-hidden className="h-3.5 w-3.5" />
                   </Link>
-                  <Link className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline" href={`/restaurants/${job.tenant_id}`}>
+                  <Link
+                    className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+                    href={`/restaurants/${job.tenant_id}`}
+                  >
                     Summary <ExternalLink aria-hidden className="h-3.5 w-3.5" />
                   </Link>
                 </div>

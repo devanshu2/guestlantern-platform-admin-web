@@ -35,7 +35,9 @@ function issueMap(error: { issues: Array<{ path: PropertyKey[]; message: string 
 
 export function ProvisionForm() {
   const [form, setForm] = useState<FormState>(initialState);
-  const [errors, setErrors] = useState<Partial<Record<keyof ProvisionRestaurantRequest, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProvisionRestaurantRequest, string>>>(
+    {}
+  );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ProvisionRestaurantJobReceipt | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,7 +78,8 @@ export function ProvisionForm() {
         <p className="text-xs font-medium uppercase tracking-wide text-muted">Tenant onboarding</p>
         <h1 className="text-2xl font-semibold text-ink">Provision restaurant</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Queue the current backend create-and-provision workflow. The response is asynchronous: use the returned job ID to monitor step progress, audit, and final runtime receipt.
+          Queue the current backend create-and-provision workflow. The response is asynchronous: use
+          the returned job ID to monitor step progress, audit, and final runtime receipt.
         </p>
       </section>
 
@@ -91,7 +94,10 @@ export function ProvisionForm() {
         </Alert>
       ) : null}
 
-      <Panel title="Restaurant identity" description="These values create the control-plane restaurant record and platform-managed hosts.">
+      <Panel
+        title="Restaurant identity"
+        description="These values create the control-plane restaurant record and platform-managed hosts."
+      >
         <form className="space-y-5" onSubmit={onSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <Field
@@ -179,11 +185,16 @@ export function ProvisionForm() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" loading={loading} icon={<ClipboardCheck aria-hidden className="h-4 w-4" />}>
+            <Button
+              type="submit"
+              loading={loading}
+              icon={<ClipboardCheck aria-hidden className="h-4 w-4" />}
+            >
               Queue provisioning
             </Button>
             <p className="text-sm text-muted">
-              After submission, the dashboard will use the job record as the tenant index until restaurant list/search exists.
+              After submission, the dashboard will use the job record as the tenant index until
+              restaurant list/search exists.
             </p>
           </div>
         </form>
@@ -193,7 +204,14 @@ export function ProvisionForm() {
         <Panel
           title="Queued job"
           description="The backend has accepted the request with HTTP 202. Continue in job monitoring."
-          actions={<Link className="text-sm font-medium text-brand hover:underline" href={`/jobs/${receipt.job_id}`}>Open job detail</Link>}
+          actions={
+            <Link
+              className="text-sm font-medium text-brand hover:underline"
+              href={`/jobs/${receipt.job_id}`}
+            >
+              Open job detail
+            </Link>
+          }
         >
           <KeyValue
             items={[
