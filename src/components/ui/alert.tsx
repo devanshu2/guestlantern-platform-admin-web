@@ -1,10 +1,10 @@
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 
 const toneClasses = {
-  info: "border-cyan-200 bg-cyan-50 text-cyan-950",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-950",
-  danger: "border-red-200 bg-red-50 text-red-950",
-  warning: "border-amber-200 bg-amber-50 text-amber-950"
+  info: "border-info-line bg-info-soft text-info",
+  success: "border-success-line bg-success-soft text-success",
+  danger: "border-danger-line bg-danger-soft text-danger",
+  warning: "border-warning-line bg-warning-soft text-warning"
 };
 
 const icons = {
@@ -28,8 +28,7 @@ export function Alert({
   const Icon = icons[tone];
   return (
     <div
-      className={`flex gap-3 border p-3 text-sm ${toneClasses[tone]}`}
-      style={{ borderRadius: 8 }}
+      className={`flex gap-3 rounded-lg border p-3 text-sm ${toneClasses[tone]}`}
       role={tone === "danger" ? "alert" : "status"}
       aria-live={live ? "polite" : undefined}
     >

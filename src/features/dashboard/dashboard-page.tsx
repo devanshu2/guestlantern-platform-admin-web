@@ -1,16 +1,20 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
+import { Activity, ClipboardList, Gauge, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/data-state";
 import { KeyValue } from "@/components/ui/key-value";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
+import { StatCard } from "@/components/ui/stat-card";
 import { JobTable } from "@/features/jobs/job-table";
 import { RestaurantLookup } from "@/features/dashboard/restaurant-lookup";
 import { healthApi, platformApi } from "@/lib/api/client";
 import { useLoader } from "@/lib/api/hooks";
+import { isActiveJobStatus } from "@/lib/api/status";
 import type {
   Page,
   ProvisionRestaurantJobSummary,
@@ -30,29 +34,60 @@ export function DashboardPage() {
     await Promise.all([readiness.reload(), runtime.reload(), jobs.reload()]);
   }
 
+  const activeJobCount =
+    jobs.data?.items.filter((job) => isActiveJobStatus(job.job_status)).length ?? 0;
+  const failedJobCount = jobs.data?.items.filter((job) => job.job_status === "failed").length ?? 0;
+
   return (
-    <div className="space-y-4">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Operator overview
-          </p>
-          <h1 className="text-2xl font-semibold text-ink">Dashboard</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Monitor platform readiness, provisioning queues, and tenant repair entry points.
-            Restaurant search is currently UUID based because the backend does not expose a general
-            tenant list/search route.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={reloadAll}
-          icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Operator overview"
+        title="Dashboard"
+        description="Monitor platform readiness, provisioning queues, and tenant repair entry points. Restaurant search is UUID based until the backend exposes a general tenant search route."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={reloadAll}
+            icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Readiness"
+          value={readiness.data ? <StatusBadge status={readiness.data.status} /> : "Checking"}
+          helper={readiness.data?.surface ?? readiness.error ?? "Backend dependency probe"}
+          icon={<Gauge aria-hidden className="h-5 w-5" />}
+          tone={
+            readiness.error ? "danger" : readiness.data?.status === "ready" ? "success" : "info"
+          }
+        />
+        <StatCard
+          label="Runtime counters"
+          value={runtime.data?.counters.length ?? 0}
+          helper={runtime.error ?? "Counters available from runtime telemetry"}
+          icon={<Activity aria-hidden className="h-5 w-5" />}
+          tone={runtime.error ? "danger" : "info"}
+        />
+        <StatCard
+          label="Active jobs"
+          value={jobs.data ? activeJobCount : "Loading"}
+          helper="Queued and running jobs in the recent window"
+          icon={<ClipboardList aria-hidden className="h-5 w-5" />}
+          tone={activeJobCount > 0 ? "warning" : "neutral"}
+        />
+        <StatCard
+          label="Failed jobs"
+          value={jobs.data ? failedJobCount : "Loading"}
+          helper="Recent jobs needing operator review"
+          icon={<ClipboardList aria-hidden className="h-5 w-5" />}
+          tone={failedJobCount > 0 ? "danger" : "success"}
+        />
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Panel
@@ -68,7 +103,10 @@ export function DashboardPage() {
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {readiness.data.checks.map((check) => (
-                  <div key={check.name} className="rounded-md border border-line bg-slate-50 p-3">
+                  <div
+                    key={check.name}
+                    className="rounded-lg border border-line bg-surface-muted p-3"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-mono text-xs text-ink">{check.name}</p>
                       <StatusBadge status={check.status} />
@@ -81,7 +119,7 @@ export function DashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted">Loading readiness...</p>
+            <LoadingState>Loading readiness...</LoadingState>
           )}
         </Panel>
 
@@ -98,7 +136,7 @@ export function DashboardPage() {
               }))}
             />
           ) : (
-            <p className="text-sm text-muted">Loading counters...</p>
+            <LoadingState>Loading counters...</LoadingState>
           )}
         </Panel>
       </div>
@@ -107,7 +145,7 @@ export function DashboardPage() {
         title="Recent provisioning jobs"
         description="Provisioning jobs are the current tenant index. Open a job for timeline and operator controls, or open the restaurant summary by tenant ID."
         actions={
-          <Link className="text-sm font-medium text-brand hover:underline" href="/jobs">
+          <Link className="text-sm font-semibold text-brand hover:underline" href="/jobs">
             View all jobs
           </Link>
         }
@@ -116,7 +154,7 @@ export function DashboardPage() {
         {jobs.data ? (
           <JobTable jobs={jobs.data.items} />
         ) : (
-          <p className="text-sm text-muted">Loading jobs...</p>
+          <LoadingState>Loading jobs...</LoadingState>
         )}
       </Panel>
 
@@ -136,7 +174,10 @@ export function DashboardPage() {
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {["Backup", "Disable", "Re-enable", "Permanent delete"].map((item) => (
-            <div key={item} className="rounded-md border border-dashed border-line bg-slate-50 p-3">
+            <div
+              key={item}
+              className="rounded-lg border border-dashed border-line-strong bg-surface-muted p-3"
+            >
               <div className="flex items-center justify-between">
                 <p className="font-medium text-ink">{item}</p>
                 <Badge tone="muted">Blocked</Badge>

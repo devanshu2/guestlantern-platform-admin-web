@@ -1,14 +1,18 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
+import { Activity, ClipboardList, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Alert } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/data-state";
 import { KeyValue } from "@/components/ui/key-value";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
+import { StatCard } from "@/components/ui/stat-card";
+import { TableFrame } from "@/components/ui/table-frame";
 import { OperatorActionDialog } from "@/features/jobs/operator-action-dialog";
 import { platformApi } from "@/lib/api/client";
 import { useLoader } from "@/lib/api/hooks";
@@ -49,33 +53,59 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
   }, [job?.job_status, jobId]);
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Provisioning workflow
-          </p>
-          <h1 className="break-all text-2xl font-semibold text-ink">Job {jobId}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Job detail combines worker lease metadata, ordered provisioning steps, final runtime
-            receipt, and audit events.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={reload}
-          icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Provisioning workflow"
+        title={`Job ${jobId}`}
+        description="Job detail combines worker lease metadata, ordered provisioning steps, final runtime receipt, and audit events."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={reload}
+            icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {status.error ? <Alert tone="danger">{status.error}</Alert> : null}
       {timeline.error ? <Alert tone="danger">{timeline.error}</Alert> : null}
 
       {job ? (
         <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Job status"
+              value={<StatusBadge status={job.job_status} />}
+              helper={`Restaurant status: ${job.restaurant_status}`}
+              icon={<Activity aria-hidden className="h-5 w-5" />}
+              tone={job.job_status === "failed" ? "danger" : "info"}
+            />
+            <StatCard
+              label="Steps"
+              value={`${job.steps.filter((step) => step.step_status === "succeeded").length}/${job.steps.length}`}
+              helper="Succeeded steps in this attempt"
+              icon={<ClipboardList aria-hidden className="h-5 w-5" />}
+              tone={progress === 100 ? "success" : "warning"}
+            />
+            <StatCard
+              label="Worker"
+              value={job.claimed_by ?? "Unclaimed"}
+              helper={`Heartbeat: ${formatDateTime(job.last_heartbeat_at)}`}
+              icon={<Activity aria-hidden className="h-5 w-5" />}
+              tone={job.claimed_by ? "success" : "neutral"}
+            />
+            <StatCard
+              label="Updated"
+              value={formatDateTime(job.updated_at)}
+              helper={`Created: ${formatDateTime(job.created_at)}`}
+              icon={<RefreshCcw aria-hidden className="h-5 w-5" />}
+              tone="neutral"
+            />
+          </div>
+
           <Panel
             title="Job status"
             description="Status, tenant, hosts, lease, and timing fields are returned directly by the backend."
@@ -93,7 +123,7 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
                 <StatusBadge status={job.job_status} />
                 <StatusBadge status={job.restaurant_status} />
                 <Link
-                  className="text-sm font-medium text-brand hover:underline"
+                  className="text-sm font-semibold text-brand hover:underline"
                   href={`/restaurants/${job.tenant_id}`}
                 >
                   Open restaurant summary
@@ -128,42 +158,34 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
             title="Provisioning steps"
             description="Steps are displayed in backend execution order. Error text is shown only when the backend returns it."
           >
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
+            <TableFrame>
+              <table className="data-table">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wide text-muted">
-                    <th className="border-b border-line px-3 py-2">Order</th>
-                    <th className="border-b border-line px-3 py-2">Step key</th>
-                    <th className="border-b border-line px-3 py-2">Status</th>
-                    <th className="border-b border-line px-3 py-2">Started</th>
-                    <th className="border-b border-line px-3 py-2">Finished</th>
-                    <th className="border-b border-line px-3 py-2">Error</th>
+                  <tr>
+                    <th>Order</th>
+                    <th>Step key</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Finished</th>
+                    <th>Error</th>
                   </tr>
                 </thead>
                 <tbody>
                   {job.steps.map((step) => (
                     <tr key={step.step_key}>
-                      <td className="border-b border-line px-3 py-3">{step.step_order}</td>
-                      <td className="border-b border-line px-3 py-3 font-mono text-xs">
-                        {step.step_key}
-                      </td>
-                      <td className="border-b border-line px-3 py-3">
+                      <td>{step.step_order}</td>
+                      <td className="font-mono text-xs">{step.step_key}</td>
+                      <td>
                         <StatusBadge status={step.step_status} />
                       </td>
-                      <td className="border-b border-line px-3 py-3 text-xs text-muted">
-                        {formatDateTime(step.started_at)}
-                      </td>
-                      <td className="border-b border-line px-3 py-3 text-xs text-muted">
-                        {formatDateTime(step.finished_at)}
-                      </td>
-                      <td className="border-b border-line px-3 py-3 text-xs text-danger">
-                        {step.error_message ?? ""}
-                      </td>
+                      <td className="text-xs text-muted">{formatDateTime(step.started_at)}</td>
+                      <td className="text-xs text-muted">{formatDateTime(step.finished_at)}</td>
+                      <td className="text-xs text-danger">{step.error_message ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableFrame>
           </Panel>
 
           {job.receipt ? (
@@ -199,7 +221,7 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-muted">Loading job detail...</p>
+        <LoadingState>Loading job detail...</LoadingState>
       )}
 
       <Panel
@@ -209,7 +231,10 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
         {timeline.data ? (
           <ol className="space-y-3">
             {timeline.data.audit_events.map((event) => (
-              <li key={event.audit_id} className="rounded-md border border-line bg-slate-50 p-3">
+              <li
+                key={event.audit_id}
+                className="rounded-lg border border-line bg-surface-muted p-3"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={event.is_success ? "succeeded" : "failed"} />
                   <span className="font-mono text-xs text-ink">{event.event_type}</span>
@@ -225,7 +250,7 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
             ))}
           </ol>
         ) : (
-          <p className="text-sm text-muted">Loading audit timeline...</p>
+          <LoadingState>Loading audit timeline...</LoadingState>
         )}
       </Panel>
     </div>

@@ -137,7 +137,7 @@ export function CheckboxField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex gap-3 rounded-md border border-line bg-slate-50 p-3">
+    <div className="flex gap-3 rounded-lg border border-line bg-surface-muted p-3">
       <input
         id={name}
         name={name}

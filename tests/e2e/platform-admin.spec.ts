@@ -16,7 +16,7 @@ test("dashboard loads with accessible core landmarks", async ({ page }) => {
   await expect(page.getByText("Recent provisioning jobs")).toBeVisible();
   await expect(page.getByRole("link", { name: "Monitor jobs" })).toBeVisible();
 
-  const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+  const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
 

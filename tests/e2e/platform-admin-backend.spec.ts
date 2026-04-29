@@ -40,7 +40,7 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
   const jobId = jobHref?.replace("/jobs/", "") ?? "";
   await openJobLink.click();
   await expect(page.getByRole("heading", { name: `Job ${jobId}` })).toBeVisible();
-  await expect(page.getByText("Job status")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Job status" })).toBeVisible();
   await expect(page.getByText(tenantId)).toBeVisible();
 
   await expect(page.getByText("Runtime receipt")).toBeVisible({ timeout: 90_000 });

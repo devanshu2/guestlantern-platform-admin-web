@@ -6,7 +6,9 @@ import { FormEvent, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/data-state";
 import { Field } from "@/components/ui/field";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { platformApi } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errors";
@@ -59,15 +61,12 @@ export function AuditPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <section>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">Provisioning audit</p>
-        <h1 className="text-2xl font-semibold text-ink">Audit events</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Search provisioning audit history by job ID, restaurant UUID, or both. Unscoped audit
-          browsing is intentionally blocked by the backend.
-        </p>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Provisioning audit"
+        title="Audit events"
+        description="Search provisioning audit history by job ID, restaurant UUID, or both. Unscoped audit browsing is intentionally blocked by the backend."
+      />
 
       <Panel
         title="Audit filters"
@@ -114,7 +113,10 @@ export function AuditPage() {
           events.items.length > 0 ? (
             <ol className="space-y-3">
               {events.items.map((event) => (
-                <li key={event.audit_id} className="rounded-md border border-line bg-slate-50 p-3">
+                <li
+                  key={event.audit_id}
+                  className="rounded-lg border border-line bg-surface-muted p-3"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={event.is_success ? "succeeded" : "failed"} />
                     <span className="font-mono text-xs text-ink">{event.event_type}</span>
@@ -141,17 +143,19 @@ export function AuditPage() {
                       <dd>{event.ip_address ?? "Not recorded"}</dd>
                     </div>
                   </dl>
-                  <pre className="mt-3 overflow-x-auto rounded-md bg-white p-3 text-xs text-ink">
+                  <pre className="mt-3 overflow-x-auto rounded-md border border-line bg-surface-raised p-3 text-xs text-ink">
                     {JSON.stringify(event.metadata, null, 2)}
                   </pre>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="text-sm text-muted">No audit events matched the current filters.</p>
+            <EmptyState title="No audit events">
+              No audit events matched the current filters.
+            </EmptyState>
           )
         ) : (
-          <p className="text-sm text-muted">Run a search to load scoped audit events.</p>
+          <EmptyState title="No search run">Run a search to load scoped audit events.</EmptyState>
         )}
       </Panel>
     </div>

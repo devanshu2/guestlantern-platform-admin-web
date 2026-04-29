@@ -90,17 +90,17 @@ export function OperatorActionDialog({
       </Button>
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
           role="presentation"
         >
           <form
-            className="panel w-full max-w-lg"
+            className="panel flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${action}-title`}
             onSubmit={submit}
           >
-            <div className="flex gap-3 border-b border-line p-4">
+            <div className="flex shrink-0 gap-3 border-b border-line p-4">
               <AlertTriangle aria-hidden className="mt-1 h-5 w-5 shrink-0 text-warning" />
               <div>
                 <h2 id={`${action}-title`} className="text-lg font-semibold text-ink">
@@ -109,7 +109,7 @@ export function OperatorActionDialog({
                 <p className="mt-1 text-sm leading-6 text-muted">{copy.description}</p>
               </div>
             </div>
-            <div className="space-y-4 p-4">
+            <div className="space-y-4 overflow-y-auto p-4">
               {error ? <Alert tone="danger">{error}</Alert> : null}
               {copy.needsReason ? (
                 <TextAreaField
@@ -126,7 +126,7 @@ export function OperatorActionDialog({
                 </Alert>
               )}
             </div>
-            <div className="flex flex-wrap justify-end gap-2 border-t border-line p-4">
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-line bg-surface-raised p-4">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                 Close
               </Button>

@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { KeyValue } from "@/components/ui/key-value";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { platformApi } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errors";
@@ -73,15 +74,12 @@ export function ProvisionForm() {
   }
 
   return (
-    <div className="space-y-4">
-      <section>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">Tenant onboarding</p>
-        <h1 className="text-2xl font-semibold text-ink">Provision restaurant</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Queue the current backend create-and-provision workflow. The response is asynchronous: use
-          the returned job ID to monitor step progress, audit, and final runtime receipt.
-        </p>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Tenant onboarding"
+        title="Provision restaurant"
+        description="Queue the current backend create-and-provision workflow. The response is asynchronous: use the returned job ID to monitor step progress, audit, and final runtime receipt."
+      />
 
       {receipt ? (
         <Alert tone="success" title="Provisioning queued" live>

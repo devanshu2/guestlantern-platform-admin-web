@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/data-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { JobTable } from "@/features/jobs/job-table";
 import { platformApi } from "@/lib/api/client";
@@ -51,45 +53,43 @@ export function JobsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Provisioning operations
-          </p>
-          <h1 className="text-2xl font-semibold text-ink">Provisioning jobs</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Use this list as the current tenant index. Filter by backend job status, open details
-            for step progress, and jump to restaurant summaries from tenant IDs.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => jobs.reload()}
-          icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Provisioning operations"
+        title="Provisioning jobs"
+        description="Use this list as the current tenant index. Filter by backend job status, open details for step progress, and jump to restaurant summaries from tenant IDs."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => jobs.reload()}
+            icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       <Panel
         title="Job list"
         description="Statuses map directly to the current backend contract: queued, running, succeeded, failed, and cancelled."
       >
-        <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Job status filters">
+        <div
+          className="mb-4 flex flex-wrap gap-2 rounded-lg border border-line bg-surface-muted p-2"
+          role="tablist"
+          aria-label="Job status filters"
+        >
           {statuses.map((item) => (
             <button
               key={item}
               type="button"
               role="tab"
               aria-selected={status === item}
-              className={`min-h-10 px-3 py-2 text-sm font-medium ${
+              className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition ${
                 status === item
-                  ? "bg-brand text-white"
-                  : "border border-line bg-white text-ink hover:bg-slate-50"
+                  ? "bg-brand text-on-brand"
+                  : "border border-transparent text-muted hover:bg-surface-raised hover:text-ink"
               }`}
-              style={{ borderRadius: 6 }}
               onClick={() => setStatus(item)}
             >
               {item === "all" ? "All" : statusLabel(item)}
@@ -101,7 +101,7 @@ export function JobsPage() {
         {jobs.data ? (
           <JobTable jobs={jobs.data.items} />
         ) : (
-          <p className="text-sm text-muted">Loading jobs...</p>
+          <LoadingState>Loading jobs...</LoadingState>
         )}
 
         {jobs.data ? (
@@ -114,15 +114,17 @@ export function JobsPage() {
             <div className="flex gap-2">
               <Link
                 aria-disabled={page <= 1}
-                className={`border border-line px-3 py-2 ${page <= 1 ? "pointer-events-none opacity-50" : "hover:bg-slate-50"}`}
-                style={{ borderRadius: 6 }}
+                className={`rounded-md border border-line px-3 py-2 ${
+                  page <= 1
+                    ? "pointer-events-none opacity-50"
+                    : "bg-surface-raised text-ink hover:bg-surface-muted"
+                }`}
                 href={`/jobs?${new URLSearchParams({ ...(status !== "all" ? { status } : {}), page: String(Math.max(1, page - 1)) })}`}
               >
                 Previous
               </Link>
               <Link
-                className="border border-line px-3 py-2 hover:bg-slate-50"
-                style={{ borderRadius: 6 }}
+                className="rounded-md border border-line bg-surface-raised px-3 py-2 text-ink hover:bg-surface-muted"
                 href={`/jobs?${new URLSearchParams({ ...(status !== "all" ? { status } : {}), page: String(page + 1) })}`}
               >
                 Next

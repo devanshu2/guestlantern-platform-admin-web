@@ -5,8 +5,12 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/data-state";
 import { KeyValue } from "@/components/ui/key-value";
+import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
+import { StatCard } from "@/components/ui/stat-card";
+import { TableFrame } from "@/components/ui/table-frame";
 import { AuthConfigForm } from "@/features/restaurants/auth-config-form";
 import { DatabaseConfigForm } from "@/features/restaurants/database-config-form";
 import { DomainForm } from "@/features/restaurants/domain-form";
@@ -52,28 +56,22 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
   const data = summary.data;
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Restaurant operations
-          </p>
-          <h1 className="break-all text-2xl font-semibold text-ink">Restaurant {restaurantId}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Operational summary is a repair-oriented view. It shows restaurant metadata, domain
-            bindings, runtime config, infra state, readiness gaps, and probe results from the
-            current backend contract.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => summary.reload()}
-          icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </section>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Restaurant operations"
+        title={`Restaurant ${restaurantId}`}
+        description="Operational summary is a repair-oriented view. It shows restaurant metadata, domain bindings, runtime config, infra state, readiness gaps, and probe results from the current backend contract."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => summary.reload()}
+            icon={<RefreshCcw aria-hidden className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {summary.error ? <Alert tone="danger">{summary.error}</Alert> : null}
       {prepareMessage ? (
@@ -84,13 +82,42 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
 
       {data ? (
         <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Restaurant"
+              value={data.restaurant.display_name}
+              helper={data.restaurant.slug}
+              tone="neutral"
+            />
+            <StatCard
+              label="Readiness"
+              value={
+                <StatusBadge status={data.provisioning_readiness.ready ? "ready" : "not_ready"} />
+              }
+              helper={`${data.provisioning_readiness.missing_items.length} readiness gaps`}
+              tone={data.provisioning_readiness.ready ? "success" : "warning"}
+            />
+            <StatCard
+              label="Domains"
+              value={data.domains.length}
+              helper="Active and inactive bindings"
+              tone="info"
+            />
+            <StatCard
+              label="Infra state"
+              value={data.infra_state?.infra_state ?? "Missing"}
+              helper={data.provisioning_runtime.runtime_enabled ? "Runtime enabled" : "Runtime off"}
+              tone={data.infra_state ? "success" : "warning"}
+            />
+          </div>
+
           <Panel
             title={data.restaurant.display_name}
             description="Core restaurant metadata returned by `/operational-summary`."
             actions={
               <div className="flex flex-wrap gap-2">
                 <Link
-                  className="text-sm font-medium text-brand hover:underline"
+                  className="text-sm font-semibold text-brand hover:underline"
                   href={`/audit?restaurant_id=${data.restaurant.restaurant_id}`}
                 >
                   View audit
@@ -136,7 +163,10 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
               ) : (
                 <ul className="space-y-2">
                   {data.provisioning_readiness.missing_items.map((item) => (
-                    <li key={item.code} className="rounded-md border border-line bg-slate-50 p-3">
+                    <li
+                      key={item.code}
+                      className="rounded-lg border border-line bg-surface-muted p-3"
+                    >
                       <p className="font-mono text-xs text-danger">{item.code}</p>
                       <p className="mt-1 text-sm text-ink">{item.message}</p>
                     </li>
@@ -178,37 +208,31 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
             title="Domains"
             description="Active and inactive domain bindings. Creating a primary domain can promote it according to backend rules."
           >
-            <div className="mb-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="text-xs uppercase tracking-wide text-muted">
-                    <th className="border-b border-line px-3 py-2">Host</th>
-                    <th className="border-b border-line px-3 py-2">Type</th>
-                    <th className="border-b border-line px-3 py-2">Primary</th>
-                    <th className="border-b border-line px-3 py-2">Active</th>
-                    <th className="border-b border-line px-3 py-2">Verified</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.domains.map((domain) => (
-                    <tr key={domain.id}>
-                      <td className="border-b border-line px-3 py-3 font-mono text-xs">
-                        {domain.host}
-                      </td>
-                      <td className="border-b border-line px-3 py-3">{domain.domain_type}</td>
-                      <td className="border-b border-line px-3 py-3">
-                        {domain.is_primary ? "Yes" : "No"}
-                      </td>
-                      <td className="border-b border-line px-3 py-3">
-                        {domain.is_active ? "Yes" : "No"}
-                      </td>
-                      <td className="border-b border-line px-3 py-3 text-xs text-muted">
-                        {formatDateTime(domain.verified_at)}
-                      </td>
+            <div className="mb-4">
+              <TableFrame>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Host</th>
+                      <th>Type</th>
+                      <th>Primary</th>
+                      <th>Active</th>
+                      <th>Verified</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.domains.map((domain) => (
+                      <tr key={domain.id}>
+                        <td className="font-mono text-xs">{domain.host}</td>
+                        <td>{domain.domain_type}</td>
+                        <td>{domain.is_primary ? "Yes" : "No"}</td>
+                        <td>{domain.is_active ? "Yes" : "No"}</td>
+                        <td className="text-xs text-muted">{formatDateTime(domain.verified_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableFrame>
             </div>
             <DomainForm restaurantId={restaurantId} onSaved={summary.reload} />
           </Panel>
@@ -303,7 +327,7 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
               {["Backup", "Disable", "Re-enable", "Permanent delete"].map((item) => (
                 <div
                   key={item}
-                  className="rounded-md border border-dashed border-line bg-slate-50 p-3"
+                  className="rounded-lg border border-dashed border-line-strong bg-surface-muted p-3"
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-ink">{item}</p>
@@ -318,7 +342,7 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
           </Panel>
         </>
       ) : (
-        <p className="text-sm text-muted">Loading restaurant operational summary...</p>
+        <LoadingState>Loading restaurant operational summary...</LoadingState>
       )}
     </div>
   );

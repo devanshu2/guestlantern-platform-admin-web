@@ -6,9 +6,9 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
         <span>{label}</span>
         <span>{bounded}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+      <div className="h-2 overflow-hidden rounded-full bg-surface-muted ring-1 ring-line">
         <div
-          className="h-full bg-brand"
+          className="h-full rounded-full bg-brand"
           style={{ width: `${bounded}%` }}
           role="progressbar"
           aria-valuemin={0}

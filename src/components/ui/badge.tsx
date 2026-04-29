@@ -1,22 +1,21 @@
 import { statusLabel, statusTone } from "@/lib/api/status";
 
 const toneClasses: Record<string, string> = {
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  danger: "border-red-200 bg-red-50 text-red-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
-  info: "border-cyan-200 bg-cyan-50 text-cyan-900",
-  muted: "border-slate-200 bg-slate-100 text-slate-700",
-  neutral: "border-line bg-white text-ink"
+  success: "border-success-line bg-success-soft text-success",
+  danger: "border-danger-line bg-danger-soft text-danger",
+  warning: "border-warning-line bg-warning-soft text-warning",
+  info: "border-info-line bg-info-soft text-info",
+  muted: "border-line bg-surface-muted text-muted",
+  neutral: "border-line bg-surface-raised text-ink"
 };
 
 export function StatusBadge({ status }: { status?: string | null }) {
   const tone = statusTone(status);
   return (
     <span
-      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-medium ${toneClasses[tone]}`}
-      style={{ borderRadius: 999 }}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${toneClasses[tone]}`}
     >
-      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
+      <span aria-hidden className="status-dot h-1.5 w-1.5 bg-current" />
       {statusLabel(status)}
     </span>
   );
@@ -31,8 +30,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center border px-2 py-1 text-xs font-medium ${toneClasses[tone]}`}
-      style={{ borderRadius: 999 }}
+      className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${toneClasses[tone]}`}
     >
       {children}
     </span>
