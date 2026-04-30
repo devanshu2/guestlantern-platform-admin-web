@@ -66,7 +66,9 @@ async function waitForScreenshotReady(page: Page) {
 
 async function expectDashboardLoaded(page: Page) {
   await expect(page.getByText("control_plane_postgres")).toBeVisible();
-  await expect(page.getByText("restaurant.provisioning.jobs.failed")).toBeVisible();
+  await expect(
+    page.locator('[data-counter-name="restaurant_provisioning.jobs_failed_current"]')
+  ).toBeVisible();
   await expect(page.locator("tbody tr").first()).toBeVisible();
 }
 
@@ -79,6 +81,22 @@ test("dashboard loads with accessible core landmarks", async ({ page }) => {
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
+});
+
+test("dashboard runtime counters stay inside their tiles", async ({ page }) => {
+  await login(page);
+  await expectDashboardLoaded(page);
+
+  const overflowingCounters = await page.getByTestId("runtime-counter-card").evaluateAll((cards) =>
+    cards
+      .map((card) => {
+        const overflowed = card.scrollWidth > card.clientWidth + 1;
+        return overflowed ? card.textContent?.trim() : null;
+      })
+      .filter(Boolean)
+  );
+
+  expect(overflowingCounters).toEqual([]);
 });
 
 test("queues a provisioning request", async ({ page }) => {

@@ -6,7 +6,6 @@ import { Alert } from "@/components/ui/alert";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/data-state";
-import { KeyValue } from "@/components/ui/key-value";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { StatCard } from "@/components/ui/stat-card";
@@ -21,6 +20,70 @@ import type {
   ReadinessReport,
   RuntimeMetricsReport
 } from "@/lib/api/types";
+
+const counterLabels: Record<string, string> = {
+  "platform.auth.throttle.login.blocked": "Blocked login attempts",
+  "restaurant_provisioning.jobs_queued_current": "Queued jobs",
+  "restaurant_provisioning.jobs_running_current": "Running jobs",
+  "restaurant_provisioning.jobs_succeeded_current": "Succeeded jobs",
+  "restaurant_provisioning.jobs_failed_current": "Failed jobs",
+  "restaurant_provisioning.jobs_cancelled_current": "Cancelled jobs",
+  "restaurant_provisioning.job_counts_unavailable": "Job counts unavailable",
+  "restaurant_provisioning.jobs_recovered": "Recovered jobs",
+  "restaurant_provisioning.recovery_failed": "Recovery failures",
+  "restaurant_provisioning.jobs_succeeded": "Worker successes",
+  "restaurant_provisioning.jobs_failed": "Worker failures"
+};
+
+function titleCase(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function counterLabel(name: string) {
+  if (counterLabels[name]) return counterLabels[name];
+  return titleCase(name.replace(/[._]+/g, " ").toLowerCase());
+}
+
+function counterGroup(name: string) {
+  if (name.startsWith("restaurant_provisioning.")) return "Provisioning";
+  if (name.startsWith("platform.auth.")) return "Auth";
+  return "Runtime";
+}
+
+function RuntimeCounters({ counters }: { counters: RuntimeMetricsReport["counters"] }) {
+  return (
+    <dl className="grid gap-3 sm:grid-cols-2" data-testid="runtime-counters-grid">
+      {counters.map((counter) => (
+        <div
+          key={counter.name}
+          className="min-w-0 rounded-lg border border-line bg-surface-muted p-3"
+          data-counter-name={counter.name}
+          data-testid="runtime-counter-card"
+          title={counter.name}
+        >
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <dt className="min-w-0">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {counterGroup(counter.name)}
+              </span>
+              <span className="mt-1 block text-sm font-semibold leading-5 text-ink">
+                {counterLabel(counter.name)}
+              </span>
+              <span className="mt-1 block text-xs leading-4 text-muted">Current runtime count</span>
+            </dt>
+            <dd className="shrink-0 rounded-md border border-line bg-surface-raised px-2 py-1 text-base font-semibold tabular-nums text-ink">
+              {counter.value.toLocaleString()}
+            </dd>
+          </div>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export function DashboardPage() {
   const readiness = useLoader<ReadinessReport>((signal) => healthApi("/ready", signal), []);
@@ -129,12 +192,7 @@ export function DashboardPage() {
         >
           {runtime.error ? <Alert tone="danger">{runtime.error}</Alert> : null}
           {runtime.data ? (
-            <KeyValue
-              items={runtime.data.counters.map((counter) => ({
-                label: counter.name,
-                value: counter.value.toLocaleString()
-              }))}
-            />
+            <RuntimeCounters counters={runtime.data.counters} />
           ) : (
             <LoadingState>Loading counters...</LoadingState>
           )}

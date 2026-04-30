@@ -170,11 +170,11 @@ function metrics(): RuntimeMetricsReport {
     surface: "platform_admin",
     counters: [
       { name: "platform.auth.throttle.login.blocked", value: 0 },
-      { name: "restaurant.provisioning.jobs.queued", value: 2 },
-      { name: "restaurant.provisioning.jobs.running", value: 1 },
-      { name: "restaurant.provisioning.jobs.succeeded", value: 8 },
-      { name: "restaurant.provisioning.jobs.failed", value: 1 },
-      { name: "restaurant.provisioning.jobs.cancelled", value: 0 }
+      { name: "restaurant_provisioning.jobs_queued_current", value: 2 },
+      { name: "restaurant_provisioning.jobs_running_current", value: 1 },
+      { name: "restaurant_provisioning.jobs_succeeded_current", value: 8 },
+      { name: "restaurant_provisioning.jobs_failed_current", value: 1 },
+      { name: "restaurant_provisioning.jobs_cancelled_current", value: 0 }
     ]
   };
 }

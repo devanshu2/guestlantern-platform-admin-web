@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 async function login(page: import("@playwright/test").Page) {
@@ -14,7 +13,6 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
 }) => {
   test.setTimeout(120_000);
 
-  const tenantId = randomUUID();
   const suffix = Date.now().toString(36);
   const slug = `web-e2e-${suffix}`;
   const displayName = `Web E2E ${suffix}`;
@@ -23,7 +21,6 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
   await expect(page.getByText("Backend readiness")).toBeVisible();
 
   await page.goto("/provision");
-  await page.getByLabel("Tenant ID").fill(tenantId);
   await page.getByLabel("External code").fill(`WEB-E2E-${suffix.toUpperCase()}`);
   await page.getByLabel("Slug").fill(slug);
   await page.getByLabel("Legal name").fill(`${displayName} Foods Pvt Ltd`);
@@ -41,6 +38,14 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
   await openJobLink.click();
   await expect(page.getByRole("heading", { name: `Job ${jobId}` })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Job status" })).toBeVisible();
+
+  const summaryLink = page.getByRole("link", { name: "Open restaurant summary" });
+  await expect(summaryLink).toBeVisible();
+  const summaryHref = await summaryLink.getAttribute("href");
+  const tenantId = summaryHref?.replace("/restaurants/", "") ?? "";
+  expect(tenantId).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  );
   await expect(page.getByText(tenantId)).toBeVisible();
 
   await expect(page.getByText("Runtime receipt")).toBeVisible({ timeout: 90_000 });
