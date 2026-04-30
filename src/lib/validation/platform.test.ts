@@ -9,7 +9,6 @@ import {
 describe("platform validation", () => {
   it("accepts a valid provisioning request", () => {
     const result = provisionRestaurantSchema.safeParse({
-      tenant_id: "",
       external_code: "SMOKE",
       slug: "smoke-provisioned",
       legal_name: "Smoke Provisioned Foods Pvt Ltd",
@@ -21,6 +20,85 @@ describe("platform validation", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("accepts provisioning without a tenant ID so the backend can generate one", () => {
+    const result = provisionRestaurantSchema.parse({
+      external_code: "SMOKE",
+      slug: "smoke-provisioned",
+      legal_name: "Smoke Provisioned Foods Pvt Ltd",
+      display_name: "Smoke Provisioned Foods",
+      owner_full_name: "Smoke Owner",
+      owner_phone_number: "+913333333333",
+      owner_email: "owner@smoke.test",
+      schema_version: "restaurant_template/0001_init.sql"
+    });
+
+    expect(result.tenant_id).toBeUndefined();
+  });
+
+  it("normalizes provisioning fields like the backend", () => {
+    const result = provisionRestaurantSchema.parse({
+      tenant_id: "",
+      external_code: " smoke-provisioned ",
+      slug: "Smoke-Provisioned",
+      legal_name: " Smoke Provisioned Foods Pvt Ltd ",
+      display_name: " Smoke Provisioned Foods ",
+      owner_full_name: " Smoke Owner ",
+      owner_phone_number: " +913333333333 ",
+      owner_email: " OWNER@SMOKE.TEST ",
+      schema_version: ""
+    });
+
+    expect(result).toMatchObject({
+      tenant_id: undefined,
+      external_code: "SMOKE-PROVISIONED",
+      slug: "smoke-provisioned",
+      legal_name: "Smoke Provisioned Foods Pvt Ltd",
+      display_name: "Smoke Provisioned Foods",
+      owner_full_name: "Smoke Owner",
+      owner_phone_number: "+913333333333",
+      owner_email: "owner@smoke.test",
+      schema_version: undefined
+    });
+  });
+
+  it("rejects provisioning values that exceed backend storage limits", () => {
+    const base = {
+      external_code: "SMOKE",
+      slug: "smoke-provisioned",
+      legal_name: "Smoke Provisioned Foods Pvt Ltd",
+      display_name: "Smoke Provisioned Foods",
+      owner_full_name: "Smoke Owner",
+      owner_phone_number: "+913333333333",
+      owner_email: "owner@smoke.test",
+      schema_version: "restaurant_template/0001_init.sql"
+    };
+
+    expect(
+      provisionRestaurantSchema.safeParse({
+        ...base,
+        external_code: "X".repeat(51)
+      }).success
+    ).toBe(false);
+    expect(
+      provisionRestaurantSchema.safeParse({
+        ...base,
+        slug: "a".repeat(49)
+      }).success
+    ).toBe(false);
+    expect(
+      provisionRestaurantSchema.safeParse({
+        ...base,
+        owner_full_name: "A".repeat(121)
+      }).success
+    ).toBe(false);
+    expect(
+      provisionRestaurantSchema.safeParse({
+        ...base,
+        schema_version: "x".repeat(51)
+      }).success
+    ).toBe(false);
   });
 
   it("rejects unsafe secret refs", () => {

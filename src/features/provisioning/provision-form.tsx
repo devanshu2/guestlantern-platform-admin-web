@@ -14,10 +14,10 @@ import { errorMessage } from "@/lib/api/errors";
 import type { ProvisionRestaurantJobReceipt, ProvisionRestaurantRequest } from "@/lib/api/types";
 import { provisionRestaurantSchema } from "@/lib/validation/platform";
 
-type FormState = Record<keyof ProvisionRestaurantRequest, string>;
+type ProvisionFormField = Exclude<keyof ProvisionRestaurantRequest, "tenant_id">;
+type FormState = Record<ProvisionFormField, string>;
 
 const initialState: FormState = {
-  tenant_id: "",
   external_code: "",
   slug: "",
   legal_name: "",
@@ -44,7 +44,13 @@ export function ProvisionForm() {
   const [loading, setLoading] = useState(false);
 
   function update(name: keyof FormState, value: string) {
-    setForm((current) => ({ ...current, [name]: value }));
+    const normalized =
+      name === "external_code"
+        ? value.toUpperCase()
+        : name === "slug" || name === "owner_email"
+          ? value.toLowerCase()
+          : value;
+    setForm((current) => ({ ...current, [name]: normalized }));
     setErrors((current) => ({ ...current, [name]: undefined }));
   }
 
@@ -94,25 +100,18 @@ export function ProvisionForm() {
 
       <Panel
         title="Restaurant identity"
-        description="These values create the control-plane restaurant record and platform-managed hosts."
+        description="These values create the control-plane restaurant record and platform-managed hosts. The backend generates the restaurant UUID automatically."
       >
         <form className="space-y-5" onSubmit={onSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Tenant ID"
-              name="tenant_id"
-              value={form.tenant_id}
-              onChange={(event) => update("tenant_id", event.target.value)}
-              helper="Optional. Leave empty to let the backend generate one. Example: 33333333-3333-4333-8333-333333333333."
-              error={errors.tenant_id}
-            />
             <Field
               label="External code"
               name="external_code"
               value={form.external_code}
               onChange={(event) => update("external_code", event.target.value)}
-              helper="Operator-facing identifier. The backend normalizes it to uppercase. Example: SMOKE-PROVISIONED."
+              helper="Operator-facing identifier stored uppercase. 50 characters max. Example: SMOKE-PROVISIONED."
               error={errors.external_code}
+              maxLength={50}
               required
             />
             <Field
@@ -120,8 +119,10 @@ export function ProvisionForm() {
               name="slug"
               value={form.slug}
               onChange={(event) => update("slug", event.target.value)}
-              helper="Lower-kebab tenant slug used in managed hosts. Example: smoke-provisioned."
+              helper="Managed-host slug. Use letters, numbers, and single hyphens. 48 characters max."
               error={errors.slug}
+              placeholder="smoke-provisioned"
+              maxLength={48}
               required
             />
             <Field
@@ -131,6 +132,7 @@ export function ProvisionForm() {
               onChange={(event) => update("schema_version", event.target.value)}
               helper="Optional tenant schema template. Current default: restaurant_template/0001_init.sql."
               error={errors.schema_version}
+              maxLength={50}
             />
             <Field
               label="Legal name"
@@ -139,6 +141,7 @@ export function ProvisionForm() {
               onChange={(event) => update("legal_name", event.target.value)}
               helper="Registered business name. Example: Smoke Provisioned Foods Pvt Ltd."
               error={errors.legal_name}
+              maxLength={255}
               required
             />
             <Field
@@ -148,6 +151,7 @@ export function ProvisionForm() {
               onChange={(event) => update("display_name", event.target.value)}
               helper="Name shown to operators and tenant apps. Example: Smoke Provisioned Foods."
               error={errors.display_name}
+              maxLength={255}
               required
             />
           </div>
@@ -160,15 +164,20 @@ export function ProvisionForm() {
               onChange={(event) => update("owner_full_name", event.target.value)}
               helper="Primary owner or onboarding contact. Example: Smoke Owner."
               error={errors.owner_full_name}
+              maxLength={120}
               required
             />
             <Field
               label="Owner phone number"
               name="owner_phone_number"
+              type="tel"
+              inputMode="tel"
               value={form.owner_phone_number}
               onChange={(event) => update("owner_phone_number", event.target.value)}
               helper="Use E.164 format. Example: +913333333333."
               error={errors.owner_phone_number}
+              placeholder="+913333333333"
+              maxLength={16}
               required
             />
             <Field
@@ -177,8 +186,9 @@ export function ProvisionForm() {
               type="email"
               value={form.owner_email}
               onChange={(event) => update("owner_email", event.target.value)}
-              helper="Optional support/onboarding email. Example: owner@smoke-provisioned.test."
+              helper="Optional support/onboarding email, stored lowercase. Example: owner@smoke-provisioned.test."
               error={errors.owner_email}
+              maxLength={255}
             />
           </div>
 

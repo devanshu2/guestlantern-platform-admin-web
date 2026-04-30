@@ -13,8 +13,10 @@ export const optionalUuidSchema = z.preprocess(
 export const slugSchema = z
   .string()
   .trim()
+  .toLowerCase()
   .min(3, "Use at least 3 characters.")
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lower-kebab format, for example smoke-provisioned.");
+  .max(48, "Use 48 characters or fewer.")
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use kebab format, for example smoke-provisioned.");
 
 export const hostSchema = z
   .string()
@@ -30,22 +32,45 @@ export const secretRefSchema = z
 
 export const provisionRestaurantSchema = z.object({
   tenant_id: optionalUuidSchema,
-  external_code: z.string().trim().min(1, "External code is required."),
+  external_code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(1, "External code is required.")
+    .max(50, "Use 50 characters or fewer."),
   slug: slugSchema,
-  legal_name: z.string().trim().min(2, "Legal name is required."),
-  display_name: z.string().trim().min(2, "Display name is required."),
-  owner_full_name: z.string().trim().min(2, "Owner name is required."),
+  legal_name: z
+    .string()
+    .trim()
+    .min(2, "Legal name is required.")
+    .max(255, "Use 255 characters or fewer."),
+  display_name: z
+    .string()
+    .trim()
+    .min(2, "Display name is required.")
+    .max(255, "Use 255 characters or fewer."),
+  owner_full_name: z
+    .string()
+    .trim()
+    .min(2, "Owner name is required.")
+    .max(120, "Use 120 characters or fewer."),
   owner_phone_number: z
     .string()
     .trim()
     .regex(/^\+[1-9]\d{7,14}$/, "Use E.164 format, for example +913333333333."),
   owner_email: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-    z.string().trim().email("Use a valid email address.").optional()
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Use a valid email address.")
+      .max(255, "Use 255 characters or fewer.")
+      .optional()
   ),
   schema_version: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-    z.string().trim().min(1).optional()
+    z.string().trim().min(1).max(50, "Use 50 characters or fewer.").optional()
   )
 });
 
