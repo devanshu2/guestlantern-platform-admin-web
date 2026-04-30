@@ -58,6 +58,51 @@ PORT=3201 npm run dev
 
 Profile files live in `env/`. Production deployments should override `env/production.env` values through the deployment environment or secret manager.
 
+## Docker Workflows
+
+Docker support mirrors the same runtime profiles without replacing the npm workflows.
+
+Mocked hot-reload frontend only:
+
+```sh
+npm run docker:mocked
+```
+
+Real-backend hot-reload frontend. This starts the Dockerized `platform-admin-api` stack first, then
+runs the web container on the shared backend network:
+
+```sh
+npm run docker:development
+```
+
+Production-like local container. This builds the optimized standalone Next.js image, starts the real
+Docker backend, and runs the frontend against `http://platform-admin-api:8080`:
+
+```sh
+npm run docker:production
+```
+
+Build the production image without starting it:
+
+```sh
+npm run docker:build
+```
+
+Stop and remove frontend Docker services:
+
+```sh
+npm run docker:down
+```
+
+All Docker modes publish the app on `http://127.0.0.1:3000` by default. Override the host port with:
+
+```sh
+PLATFORM_ADMIN_DOCKER_WEB_PORT=3200 npm run docker:mocked
+```
+
+The real-backend Docker modes join `guestlantern-backend_default` by default. Override that network
+with `PLATFORM_ADMIN_BACKEND_NETWORK` if the backend compose project name changes.
+
 ## Environment Variables
 
 | Variable                            | Default              | Purpose                                                                          |

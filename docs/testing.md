@@ -55,3 +55,16 @@ This script:
 The backend-assisted suite uses a unique restaurant UUID and slug per run. It intentionally runs one Chromium project to avoid concurrent writes to local tenant infra while still exercising a real browser and the real BFF/backend contract.
 
 The Docker helper reuses the existing `guestlantern-backend-local` image when available. Set `PLATFORM_ADMIN_BACKEND_DOCKER_BUILD=1 npm run test:e2e:backend` to force a rebuild.
+
+## Docker Browser Smoke
+
+The frontend can also run in Docker:
+
+```sh
+npm run docker:mocked
+npm run docker:development
+npm run docker:production
+```
+
+Use `npm run docker:down` to stop frontend containers. The development and production Docker
+profiles reuse the real backend Docker stack and proxy health through `/api/health/ready`.

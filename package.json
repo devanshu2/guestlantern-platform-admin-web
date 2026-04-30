@@ -22,6 +22,11 @@
     "test:e2e:backend": "node scripts/run-backend-e2e.mjs",
     "backend:docker:platform:up": "node scripts/docker-platform-admin-backend.mjs up",
     "backend:docker:platform:down": "node scripts/docker-platform-admin-backend.mjs down",
+    "docker:build": "node scripts/run-docker-web.mjs build",
+    "docker:mocked": "node scripts/run-docker-web.mjs mocked",
+    "docker:development": "node scripts/run-docker-web.mjs development",
+    "docker:production": "node scripts/run-docker-web.mjs production",
+    "docker:down": "node scripts/run-docker-web.mjs down",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run test:e2e:mocked"
   },
   "engines": {

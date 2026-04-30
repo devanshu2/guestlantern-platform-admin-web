@@ -1,0 +1,16 @@
+.git
+.next
+node_modules
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+.DS_Store
+
+.env
+.env.*
+env/*.local
+env/production.env
+
+Dockerfile
+compose.yml

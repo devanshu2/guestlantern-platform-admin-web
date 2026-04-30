@@ -1,0 +1,78 @@
+name: guestlantern-platform-admin-web
+
+x-dev-common: &dev-common
+  build:
+    context: .
+    target: development
+  image: guestlantern-platform-admin-web:development
+  working_dir: /app
+  environment:
+    CHOKIDAR_USEPOLLING: "true"
+    WATCHPACK_POLLING: "true"
+  ports:
+    - "127.0.0.1:${PLATFORM_ADMIN_DOCKER_WEB_PORT:-3000}:3000"
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+    - next_cache:/app/.next
+  healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        'node -e "fetch(''http://127.0.0.1:3000/api/health/ready'').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"'
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 30s
+
+services:
+  platform-admin-web-mocked:
+    <<: *dev-common
+    profiles: ["mocked"]
+    env_file:
+      - env/docker.mocked.env
+    command: ["node", "scripts/run-next.mjs", "dev", "docker.mocked"]
+
+  platform-admin-web-development:
+    <<: *dev-common
+    profiles: ["development"]
+    env_file:
+      - env/docker.development.env
+    command: ["node", "scripts/run-next.mjs", "dev", "docker.development"]
+    networks:
+      - backend
+
+  platform-admin-web-production:
+    profiles: ["production"]
+    build:
+      context: .
+      target: production
+      args:
+        NEXT_PUBLIC_JOB_POLL_INTERVAL_MS: ${NEXT_PUBLIC_JOB_POLL_INTERVAL_MS:-5000}
+    image: guestlantern-platform-admin-web:${PLATFORM_ADMIN_WEB_IMAGE_TAG:-local}
+    env_file:
+      - env/docker.production-local.env
+    ports:
+      - "127.0.0.1:${PLATFORM_ADMIN_DOCKER_WEB_PORT:-3000}:3000"
+    networks:
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://127.0.0.1:3000/api/health/ready'').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+networks:
+  backend:
+    name: ${PLATFORM_ADMIN_BACKEND_NETWORK:-guestlantern-backend_default}
+    external: true
+
+volumes:
+  node_modules:
+  next_cache:
