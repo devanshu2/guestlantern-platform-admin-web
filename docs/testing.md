@@ -26,10 +26,18 @@ Browser scenarios cover:
 
 - Login and dashboard load.
 - Accessibility smoke on the dashboard with axe.
+- Visual regression baselines for branded theme presets and critical operator pages.
 - Provision form submission.
 - Job detail and retry confirmation dialog.
 - Restaurant summary and infra prepare.
 - Scoped audit search.
+
+Screenshot baselines live under `tests/e2e/__screenshots__/` and are keyed by Playwright project
+(`chromium` and `mobile`). Update them intentionally with:
+
+```sh
+npm run test:e2e:mocked -- --update-snapshots
+```
 
 ## Backend-Assisted Browser Smoke
 

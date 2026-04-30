@@ -16,8 +16,12 @@ export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
   workers: e2eProfile === "development" ? 1 : undefined,
+  snapshotPathTemplate: "{testDir}/__screenshots__{/projectName}/{testFilePath}/{arg}{ext}",
   expect: {
-    timeout: 8_000
+    timeout: 8_000,
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01
+    }
   },
   use: {
     baseURL,
