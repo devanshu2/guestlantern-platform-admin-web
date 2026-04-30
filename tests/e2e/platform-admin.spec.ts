@@ -95,7 +95,14 @@ test("queues a provisioning request", async ({ page }) => {
   await page.getByRole("button", { name: "Queue provisioning" }).click();
 
   await expect(page.getByText("Provisioning queued")).toBeVisible();
+  await expect(page.getByText("The form has been cleared")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open job detail" })).toBeVisible();
+  await expect(page.getByLabel("External code")).toBeHidden();
+
+  await page.getByRole("button", { name: "Provision another" }).click();
+  await expect(page.getByLabel("External code")).toBeVisible();
+  await expect(page.getByLabel("External code")).toHaveValue("");
+  await expect(page.getByLabel("Schema version")).toHaveValue("restaurant_template/0001_init.sql");
 });
 
 test("opens job detail and confirms retry", async ({ page }) => {
