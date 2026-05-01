@@ -1,6 +1,15 @@
 "use client";
 
-import { Activity, ClipboardList, FileClock, Gauge, LogOut, Search, Store } from "lucide-react";
+import {
+  Activity,
+  ClipboardList,
+  FileClock,
+  Gauge,
+  LogOut,
+  PlusCircle,
+  Search,
+  Store
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
@@ -14,7 +23,8 @@ import { LoadingState } from "@/components/ui/data-state";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
-  { href: "/provision", label: "Provision", icon: Store },
+  { href: "/restaurants", label: "Restaurants", icon: Store },
+  { href: "/provision", label: "Provision", icon: PlusCircle },
   { href: "/jobs", label: "Jobs", icon: ClipboardList },
   { href: "/audit", label: "Audit", icon: FileClock }
 ];
@@ -128,11 +138,11 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 Sign out
               </Button>
               <Link
-                href="/dashboard#lookup"
+                href="/restaurants"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-line bg-surface-raised px-3 py-2 text-sm font-semibold text-ink shadow-control hover:bg-surface-muted"
               >
                 <Search aria-hidden className="h-4 w-4" />
-                Restaurant lookup
+                Restaurant directory
               </Link>
               <Link
                 href="/jobs"

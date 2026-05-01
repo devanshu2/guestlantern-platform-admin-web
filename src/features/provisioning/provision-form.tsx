@@ -215,8 +215,8 @@ export function ProvisionForm() {
                 Queue provisioning
               </Button>
               <p className="text-sm text-muted">
-                After submission, the dashboard will use the job record as the tenant index until
-                restaurant list/search exists.
+                After submission, use the restaurant directory for lookup and Jobs for step
+                progress.
               </p>
             </div>
           </form>

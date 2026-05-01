@@ -6,6 +6,7 @@ Next.js App Router operator console for the GuestLantern `platform-admin-api`.
 
 - Platform admin login, refresh, bootstrap, and logout through a server-side BFF.
 - Dashboard with backend readiness, runtime counters, recent provisioning jobs, and direct restaurant UUID lookup.
+- Restaurant directory with backend-backed search, lifecycle status filtering, and sorting.
 - Restaurant provisioning form backed by `POST /platform/restaurants/provision`.
 - Provisioning job list, detail, step timeline, audit timeline, and operator actions.
 - Restaurant operational summary, domain creation, database/auth config repair, and infra prepare.

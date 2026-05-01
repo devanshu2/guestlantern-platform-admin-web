@@ -51,7 +51,12 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
   await expect(page.getByText("Runtime receipt")).toBeVisible({ timeout: 90_000 });
   await expect(page.getByText("provisioning_succeeded")).toBeVisible();
 
-  await page.getByRole("link", { name: "Open restaurant summary" }).click();
+  await page.goto(`/restaurants?q=${slug}`);
+  await expect(page.getByRole("heading", { name: "Restaurants" })).toBeVisible();
+  await expect(
+    page.locator('[data-testid="restaurant-directory-row"]:visible').first()
+  ).toContainText(displayName);
+  await page.getByRole("link", { name: "Summary" }).click();
   await expect(
     page.getByRole("heading", { name: new RegExp(`Restaurant ${tenantId.slice(0, 8)}`) })
   ).toBeVisible();

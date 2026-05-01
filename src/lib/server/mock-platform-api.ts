@@ -10,6 +10,7 @@ import type {
   ReadinessReport,
   RestaurantAuthConfig,
   RestaurantDatabaseConfig,
+  RestaurantDirectoryItem,
   RestaurantDomain,
   RestaurantInfraPrepareReceipt,
   RestaurantOperationalSummary,
@@ -132,6 +133,72 @@ const jobSummaries: ProvisionRestaurantJobSummary[] = [
     finished_at: now
   }
 ];
+
+const restaurantDirectoryItems: RestaurantDirectoryItem[] = [
+  {
+    restaurant_id: restaurantId,
+    external_code: "SMOKE-PROVISIONED",
+    slug: "smoke-provisioned",
+    legal_name: "Smoke Provisioned Foods Pvt Ltd",
+    display_name: "Smoke Provisioned Foods",
+    status: "active",
+    owner_email: "owner@smoke-provisioned.test",
+    primary_host: baseReceipt.public_host,
+    latest_provisioning_job_id: succeededJobId,
+    latest_provisioning_job_status: "succeeded",
+    latest_provisioning_job_updated_at: now,
+    created_at: now,
+    updated_at: now
+  },
+  {
+    restaurant_id: "44444444-4444-4444-8444-444444444444",
+    external_code: "DRAFT-CURRY",
+    slug: "draft-curry",
+    legal_name: "Draft Curry Foods Pvt Ltd",
+    display_name: "Draft Curry",
+    status: "draft",
+    owner_email: "owner@draft-curry.test",
+    primary_host: null,
+    latest_provisioning_job_id: null,
+    latest_provisioning_job_status: null,
+    latest_provisioning_job_updated_at: null,
+    created_at: now,
+    updated_at: now
+  }
+];
+
+const restaurantDirectorySortFields = [
+  "updated_at",
+  "created_at",
+  "display_name",
+  "slug",
+  "status",
+  "owner_email",
+  "primary_host",
+  "latest_job_updated_at"
+] as const;
+
+type RestaurantDirectorySortField = (typeof restaurantDirectorySortFields)[number];
+
+function isRestaurantDirectorySortField(value: string): value is RestaurantDirectorySortField {
+  return restaurantDirectorySortFields.includes(value as RestaurantDirectorySortField);
+}
+
+function restaurantDirectorySortValue(
+  restaurant: RestaurantDirectoryItem,
+  sortBy: RestaurantDirectorySortField
+) {
+  switch (sortBy) {
+    case "latest_job_updated_at":
+      return restaurant.latest_provisioning_job_updated_at ?? "";
+    case "owner_email":
+      return restaurant.owner_email ?? "";
+    case "primary_host":
+      return restaurant.primary_host ?? "";
+    default:
+      return restaurant[sortBy] ?? "";
+  }
+}
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, { status });
@@ -379,6 +446,53 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     return json(response);
   }
   if (method === "GET" && routePath === "/platform/auth/me") return json(admin);
+
+  if (method === "GET" && routePath === "/platform/restaurants") {
+    const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    const status = url.searchParams.get("status")?.trim().toLowerCase();
+    const sortByParam = url.searchParams.get("sort_by") ?? "updated_at";
+    const sortDirParam = url.searchParams.get("sort_dir") ?? "desc";
+    if (!isRestaurantDirectorySortField(sortByParam)) {
+      return error("validation_error", "sort_by is invalid", 400);
+    }
+    if (sortDirParam !== "asc" && sortDirParam !== "desc") {
+      return error("validation_error", "sort_dir is invalid", 400);
+    }
+    const pageNumber = Number(url.searchParams.get("page") ?? 1);
+    const perPage = Number(url.searchParams.get("per_page") ?? 50);
+    const filtered = restaurantDirectoryItems
+      .filter((restaurant) => {
+        const matchesStatus = !status || restaurant.status === status;
+        const searchable = [
+          restaurant.restaurant_id,
+          restaurant.external_code,
+          restaurant.slug,
+          restaurant.legal_name,
+          restaurant.display_name,
+          restaurant.owner_email,
+          restaurant.primary_host
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return matchesStatus && (!query || searchable.includes(query));
+      })
+      .sort((left, right) => {
+        const leftValue = restaurantDirectorySortValue(left, sortByParam).toLowerCase();
+        const rightValue = restaurantDirectorySortValue(right, sortByParam).toLowerCase();
+        if (leftValue === rightValue) return left.restaurant_id.localeCompare(right.restaurant_id);
+        const comparison = leftValue.localeCompare(rightValue);
+        return sortDirParam === "asc" ? comparison : -comparison;
+      });
+    const start = Math.max(0, (pageNumber - 1) * perPage);
+    const page: Page<RestaurantDirectoryItem> = {
+      items: filtered.slice(start, start + perPage),
+      page: pageNumber,
+      per_page: perPage,
+      total: filtered.length
+    };
+    return json(page);
+  }
 
   if (method === "POST" && routePath === "/platform/restaurants/provision") {
     const body = await requestBody(request);

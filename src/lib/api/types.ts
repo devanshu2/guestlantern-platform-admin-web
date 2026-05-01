@@ -280,6 +280,22 @@ export type RestaurantOperationalRecord = {
   updated_at: string;
 };
 
+export type RestaurantDirectoryItem = {
+  restaurant_id: TenantId;
+  external_code: string;
+  slug: string;
+  legal_name: string;
+  display_name: string;
+  status: string;
+  owner_email?: string | null;
+  primary_host?: string | null;
+  latest_provisioning_job_id?: string | null;
+  latest_provisioning_job_status?: string | null;
+  latest_provisioning_job_updated_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type RestaurantInfraState = {
   restaurant_id: TenantId;
   infra_state: string;

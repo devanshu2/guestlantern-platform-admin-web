@@ -106,7 +106,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="Operator overview"
         title="Dashboard"
-        description="Monitor platform readiness, provisioning queues, and tenant repair entry points. Restaurant search is UUID based until the backend exposes a general tenant search route."
+        description="Monitor platform readiness, provisioning queues, restaurant directory health, and tenant repair entry points."
         actions={
           <Button
             type="button"
@@ -201,7 +201,7 @@ export function DashboardPage() {
 
       <Panel
         title="Recent provisioning jobs"
-        description="Provisioning jobs are the current tenant index. Open a job for timeline and operator controls, or open the restaurant summary by tenant ID."
+        description="Provisioning jobs remain the operational workflow for step progress, retries, cancellation, and worker state."
         actions={
           <Link className="text-sm font-semibold text-brand hover:underline" href="/jobs">
             View all jobs
@@ -217,8 +217,13 @@ export function DashboardPage() {
       </Panel>
 
       <Panel
-        title="Restaurant lookup"
+        title="Direct UUID lookup"
         description="Open an operational summary when you already have a restaurant UUID from provisioning, audit, or an external support ticket."
+        actions={
+          <Link className="text-sm font-semibold text-brand hover:underline" href="/restaurants">
+            Search restaurants
+          </Link>
+        }
         className="scroll-mt-24"
       >
         <div id="lookup">

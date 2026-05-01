@@ -43,4 +43,4 @@ Server-side backend calls emit structured logs controlled by `PLATFORM_ADMIN_LOG
 
 ## Current Backend Gaps
 
-The current OpenAPI contract has no restaurant list/search endpoint and no lifecycle routes for backup, disable, re-enable, or permanent delete. V1 uses provisioning jobs plus direct UUID lookup as the tenant index and marks lifecycle controls as backend-blocked.
+The current OpenAPI contract has no lifecycle routes for backup, disable, re-enable, or permanent delete. V1 exposes restaurant directory search and sorting for discovery, keeps provisioning jobs as the job-operations index, and marks lifecycle controls as backend-blocked.

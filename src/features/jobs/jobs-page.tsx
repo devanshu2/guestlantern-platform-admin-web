@@ -57,7 +57,7 @@ export function JobsPage() {
       <PageHeader
         eyebrow="Provisioning operations"
         title="Provisioning jobs"
-        description="Use this list as the current tenant index. Filter by backend job status, open details for step progress, and jump to restaurant summaries from tenant IDs."
+        description="Filter by backend job status, open details for step progress, and jump to restaurant summaries from tenant IDs."
         actions={
           <Button
             type="button"

@@ -99,6 +99,100 @@ test("dashboard runtime counters stay inside their tiles", async ({ page }) => {
   expect(overflowingCounters).toEqual([]);
 });
 
+test("searches restaurant directory and opens summary", async ({ page }) => {
+  await login(page);
+  await page.goto("/restaurants");
+
+  await expect(page.getByRole("heading", { name: "Restaurants" })).toBeVisible();
+  await expect(
+    page.locator('[data-testid="restaurant-directory-row"]:visible').first()
+  ).toContainText("Smoke Provisioned Foods");
+  await page.getByLabel("Search").fill("smoke");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  await expect(page).toHaveURL(/q=smoke/);
+  await expect(page).toHaveURL(/sort_by=updated_at/);
+  await expect(page).toHaveURL(/sort_dir=desc/);
+  await expect(page).toHaveURL(/page=1/);
+  await expect(
+    page.locator('[data-testid="restaurant-directory-row"]:visible').first()
+  ).toContainText("Smoke Provisioned Foods");
+  await expect(page.getByText("Draft Curry")).toBeHidden();
+  await page.getByRole("link", { name: "Summary" }).click();
+
+  await expect(page.getByRole("heading", { name: /Restaurant 33333333/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Smoke Provisioned Foods" })).toBeVisible();
+});
+
+test("sorts restaurant directory without page overflow", async ({ page }) => {
+  await login(page);
+  await page.goto("/restaurants");
+
+  const visibleRows = page.locator('[data-testid="restaurant-directory-row"]:visible');
+  await expect(visibleRows.first()).toContainText("Smoke Provisioned Foods");
+
+  const restaurantSortButton = page.getByRole("button", { name: "Sort by restaurant" });
+  if (await restaurantSortButton.isVisible()) {
+    await restaurantSortButton.click();
+  } else {
+    await page.goto("/restaurants?sort_by=display_name&sort_dir=asc&page=1");
+  }
+  await expect(page).toHaveURL(/sort_by=display_name/);
+  await expect(page).toHaveURL(/sort_dir=asc/);
+  await expect(visibleRows.first()).toContainText("Draft Curry");
+
+  const updatedSortButton = page.getByRole("button", { name: "Sort by updated" });
+  if (await updatedSortButton.isVisible()) {
+    await updatedSortButton.click();
+  } else {
+    await page.goto("/restaurants?sort_by=updated_at&sort_dir=desc&page=1");
+  }
+  await expect(page).toHaveURL(/sort_by=updated_at/);
+  await expect(page).toHaveURL(/sort_dir=desc/);
+
+  const bodyOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(bodyOverflow).toBeLessThanOrEqual(1);
+});
+
+test("restaurant directory filter controls stay aligned", async ({ page }) => {
+  await login(page);
+  await page.goto("/restaurants");
+  await expect(page.getByRole("heading", { name: "Restaurants" })).toBeVisible();
+
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  if (viewportWidth < 1024) {
+    await expect(page.getByTestId("restaurant-search-submit")).toBeVisible();
+    return;
+  }
+
+  const searchInput = page.getByTestId("restaurant-search-control").getByLabel("Search");
+  const statusSelect = page.getByTestId("restaurant-status-control").getByLabel("Status");
+  const searchButton = page.getByTestId("restaurant-search-submit");
+  await expect(searchInput).toBeVisible();
+  await expect(statusSelect).toBeVisible();
+  await expect(searchButton).toBeVisible();
+
+  const searchBox = await searchInput.boundingBox();
+  const statusBox = await statusSelect.boundingBox();
+  const buttonBox = await searchButton.boundingBox();
+  const iconBox = await searchButton.locator("svg").boundingBox();
+  const labelBox = await searchButton.locator("span").boundingBox();
+  if (!searchBox || !statusBox || !buttonBox || !iconBox || !labelBox) {
+    throw new Error("Restaurant directory filter controls were not measurable");
+  }
+
+  expect(Math.abs(searchBox.y - statusBox.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(searchBox.height - statusBox.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(searchBox.y - buttonBox.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(searchBox.height - buttonBox.height)).toBeLessThanOrEqual(1);
+
+  const iconCenterY = iconBox.y + iconBox.height / 2;
+  const labelCenterY = labelBox.y + labelBox.height / 2;
+  expect(Math.abs(iconCenterY - labelCenterY)).toBeLessThanOrEqual(1);
+});
+
 test("queues a provisioning request", async ({ page }) => {
   await login(page);
   await page.goto("/provision");
@@ -185,6 +279,15 @@ test.describe("branded visual baselines", () => {
       await expect(page.locator("tbody tr")).toHaveCount(3);
       await waitForScreenshotReady(page);
       await expect(page).toHaveScreenshot(`jobs-${theme.name}.png`, screenshotOptions);
+
+      await page.goto("/restaurants");
+      await expectTheme(page, theme);
+      await expect(page.getByRole("heading", { name: "Restaurants" })).toBeVisible();
+      await expect(
+        page.locator('[data-testid="restaurant-directory-row"]:visible').first()
+      ).toContainText("Smoke Provisioned Foods");
+      await waitForScreenshotReady(page);
+      await expect(page).toHaveScreenshot(`restaurants-${theme.name}.png`, screenshotOptions);
 
       await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
       await expectTheme(page, theme);
