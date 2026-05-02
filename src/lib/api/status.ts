@@ -15,7 +15,11 @@ const STATUS_LABELS: Record<string, string> = {
   disabled: "Disabled",
   ready: "Ready",
   not_ready: "Not ready",
-  enabled: "Enabled"
+  enabled: "Enabled",
+  deleted: "Deleted",
+  database_backup: "Database backup",
+  re_enable: "Re-enable",
+  permanent_delete: "Permanent delete"
 };
 
 export function isActiveJobStatus(status: string): boolean {
@@ -48,6 +52,7 @@ export function statusTone(status: string | null | undefined) {
       return "info";
     case "cancelled":
     case "disabled":
+    case "deleted":
     case "skipped":
       return "muted";
     case "failed":

@@ -53,7 +53,21 @@ export async function platformFetch(
   const startedAt = Date.now();
 
   if (env.PLATFORM_ADMIN_API_MOCK) {
-    const response = await mockPlatformApi(request, path);
+    const headers = new Headers(request.headers);
+    if (options.contentType !== null) {
+      headers.set("content-type", options.contentType ?? "application/json");
+    }
+    if (options.bearerToken) {
+      headers.set("authorization", `Bearer ${options.bearerToken}`);
+    }
+    const response = await mockPlatformApi(
+      new Request(request.url, {
+        method,
+        headers,
+        body: method === "GET" || method === "HEAD" ? null : (options.body ?? null)
+      }),
+      path
+    );
     serverLogger.debug("platform_api.mock_response", {
       method,
       path,

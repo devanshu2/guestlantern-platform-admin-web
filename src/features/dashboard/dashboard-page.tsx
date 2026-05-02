@@ -3,7 +3,7 @@
 import { Activity, ClipboardList, Gauge, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
-import { Badge, StatusBadge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/data-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -232,26 +232,19 @@ export function DashboardPage() {
       </Panel>
 
       <Panel
-        title="Backend-blocked lifecycle operations"
-        description="These controls are intentionally not callable until matching backend routes exist in the current OpenAPI contract."
+        title="Tenant lifecycle operations"
+        description="Database backup, disable, re-enable, and permanent delete are available from each restaurant operational summary after UUID lookup or directory search."
+        actions={
+          <Link className="text-sm font-semibold text-brand hover:underline" href="/restaurants">
+            Search restaurants
+          </Link>
+        }
       >
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {["Backup", "Disable", "Re-enable", "Permanent delete"].map((item) => (
-            <div
-              key={item}
-              className="rounded-lg border border-dashed border-line-strong bg-surface-muted p-3"
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-medium text-ink">{item}</p>
-                <Badge tone="muted">Blocked</Badge>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-muted">
-                Requires backend tenant lifecycle API additions before this dashboard can execute
-                the operation.
-              </p>
-            </div>
-          ))}
-        </div>
+        <Alert tone="info">
+          Lifecycle actions are restaurant-scoped and use the tenant infra state returned by the
+          backend. Open a restaurant summary to review current state, database backup manifests, and
+          the operation journal before taking action.
+        </Alert>
       </Panel>
     </div>
   );

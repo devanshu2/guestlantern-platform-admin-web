@@ -20,7 +20,7 @@ Coverage includes:
 npm run test:e2e:mocked
 ```
 
-Playwright starts the app with the `mocked` profile. The mock adapter implements the current platform-admin contract only; it does not invent future lifecycle routes. The mocked suite runs on Chromium desktop and Pixel 7 mobile.
+Playwright starts the app with the `mocked` profile. The mock adapter implements the current platform-admin contract, including tenant infra lifecycle and step-up routes. The mocked suite runs on Chromium desktop and Pixel 7 mobile.
 
 Browser scenarios cover:
 

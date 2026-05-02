@@ -10,9 +10,10 @@ Next.js App Router operator console for the GuestLantern `platform-admin-api`.
 - Restaurant provisioning form backed by `POST /platform/restaurants/provision`.
 - Provisioning job list, detail, step timeline, audit timeline, and operator actions.
 - Restaurant operational summary, domain creation, database/auth config repair, and infra prepare.
+- Restaurant-scoped tenant infra lifecycle controls for Database Backup, Disable, Re-enable, and Permanent delete with password step-up.
 - Scoped provisioning audit search.
 
-Tenant lifecycle operations such as backup, disable, re-enable, and permanent delete are visible as backend-blocked scope only. They are not implemented as callable UI because the current OpenAPI contract does not expose those routes.
+Database Backup creates a tenant Postgres database snapshot. Garage media/object backup and restore are intentionally not promised by this UI.
 
 ## Backend Contract
 

@@ -234,8 +234,84 @@ test("opens restaurant summary and queues infra prepare", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: /Restaurant 33333333/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Smoke Provisioned Foods" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tenant infra lifecycle" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Database Backup" })).toBeVisible();
   await page.getByRole("button", { name: "Prepare infra" }).click();
   await expect(page.getByText(/Infra prepare queued as job/)).toBeVisible();
+});
+
+test("queues a database backup lifecycle operation with step-up", async ({ page }) => {
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+
+  await page.getByRole("button", { name: "Database Backup" }).click();
+  const dialog = page.getByRole("dialog", { name: "Database Backup" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Platform admin password").fill("change-me-platform-admin-password");
+  await dialog.getByRole("button", { name: "Confirm database backup" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText(/Database backup operation .* succeeded/i)).toBeVisible({
+    timeout: 12_000
+  });
+  await expect(page.getByText("tenant_smoke_provisioned_backup_22222222")).toBeVisible();
+});
+
+test("requires lifecycle confirmations and disables controls during active operations", async ({
+  page
+}) => {
+  await login(page);
+  const restaurantId = "33333333-3333-4333-8333-333333333333";
+  await page.goto(`/restaurants/${restaurantId}`);
+
+  await page.getByRole("button", { name: "Disable" }).click();
+  const disableDialog = page.getByRole("dialog", { name: "Disable" });
+  await disableDialog
+    .getByLabel("Platform admin password")
+    .fill("change-me-platform-admin-password");
+  await disableDialog.getByLabel("Operator reason").fill("Testing disable confirmation");
+  await expect(disableDialog.getByRole("button", { name: "Confirm disable" })).toBeDisabled();
+  await disableDialog.getByLabel("Confirm restaurant ID").fill("wrong-id");
+  await expect(page.getByText("Restaurant ID must match exactly.")).toBeVisible();
+  await disableDialog.getByLabel("Confirm restaurant ID").fill(restaurantId);
+  await expect(disableDialog.getByRole("button", { name: "Confirm disable" })).toBeEnabled();
+  await disableDialog.getByRole("button", { name: "Confirm disable" }).click();
+
+  await expect(disableDialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "Database Backup" })).toBeDisabled();
+  await expect(page.getByText(/Disable operation .* succeeded/i)).toBeVisible({ timeout: 12_000 });
+
+  await page.getByRole("button", { name: "Re-enable" }).click();
+  const reEnableDialog = page.getByRole("dialog", { name: "Re-enable" });
+  await reEnableDialog
+    .getByLabel("Platform admin password")
+    .fill("change-me-platform-admin-password");
+  await reEnableDialog.getByLabel("Operator reason").fill("Testing re-enable confirmation");
+  await expect(reEnableDialog.getByRole("button", { name: "Confirm re-enable" })).toBeDisabled();
+  await reEnableDialog.getByLabel("Confirm restaurant ID").fill(restaurantId);
+  await expect(reEnableDialog.getByRole("button", { name: "Confirm re-enable" })).toBeEnabled();
+  await reEnableDialog.getByRole("button", { name: "Confirm re-enable" }).click();
+  await expect(page.getByText(/Re-enable operation .* succeeded/i)).toBeVisible({
+    timeout: 12_000
+  });
+});
+
+test("requires typed restaurant ID and slug for permanent delete", async ({ page }) => {
+  await login(page);
+  const restaurantId = "33333333-3333-4333-8333-333333333333";
+  await page.goto(`/restaurants/${restaurantId}`);
+
+  await page.getByRole("button", { name: "Permanent delete" }).click();
+  const dialog = page.getByRole("dialog", { name: "Permanent delete" });
+  await dialog.getByLabel("Platform admin password").fill("change-me-platform-admin-password");
+  await dialog.getByLabel("Operator reason").fill("Testing permanent delete confirmation");
+  await dialog.getByLabel("Confirm restaurant ID").fill(restaurantId);
+  await expect(dialog.getByRole("button", { name: "Confirm permanent delete" })).toBeDisabled();
+  await dialog.getByLabel("Confirm slug").fill("wrong-slug");
+  await expect(page.getByText("Slug must match exactly.")).toBeVisible();
+  await dialog.getByLabel("Confirm slug").fill("smoke-provisioned");
+  await expect(dialog.getByRole("button", { name: "Confirm permanent delete" })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Close" }).click();
 });
 
 test("searches scoped audit events", async ({ page }) => {
@@ -292,7 +368,9 @@ test.describe("branded visual baselines", () => {
       await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
       await expectTheme(page, theme);
       await expect(page.getByRole("heading", { name: "Smoke Provisioned Foods" })).toBeVisible();
-      await expect(page.getByText("tenant_smoke_provisioned", { exact: true })).toBeVisible();
+      await expect(
+        page.getByText("tenant_smoke_provisioned", { exact: true }).first()
+      ).toBeVisible();
       await waitForScreenshotReady(page);
       await expect(page).toHaveScreenshot(`restaurant-${theme.name}.png`, screenshotOptions);
     });

@@ -41,6 +41,8 @@ The app has three committed runtime profiles under `env/`:
 
 Server-side backend calls emit structured logs controlled by `PLATFORM_ADMIN_LOG_LEVEL`. Debug logs include method, path, status, and duration only; request bodies, bearer tokens, and secret values are not logged.
 
-## Current Backend Gaps
+## Tenant Infra Lifecycle
 
-The current OpenAPI contract has no lifecycle routes for backup, disable, re-enable, or permanent delete. V1 exposes restaurant directory search and sorting for discovery, keeps provisioning jobs as the job-operations index, and marks lifecycle controls as backend-blocked.
+Tenant infra lifecycle controls are restaurant-scoped. The restaurant summary loads current infra state from `GET /platform/restaurants/{restaurant_id}/infra`, shows database backup manifests and operation history, and queues Database Backup, Disable, Re-enable, and Permanent delete through the current OpenAPI lifecycle routes after password step-up.
+
+Database Backup is a Postgres database snapshot only. Garage media/object backup remains separate future scope.

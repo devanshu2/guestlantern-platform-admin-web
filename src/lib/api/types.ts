@@ -38,6 +38,18 @@ export type PlatformAdminLogoutResult = {
   revoked_current_session: boolean;
 };
 
+export type PlatformStepUpRequest = {
+  password: string;
+  scope: string;
+};
+
+export type PlatformAdminStepUpGrant = {
+  status: string;
+  scope: string;
+  expires_in_secs: number;
+  expires_at_unix: number;
+};
+
 export type HttpErrorDetails = {
   code: string;
   message: string;
@@ -82,6 +94,15 @@ export type RuntimeMetricsReport = {
 export type ProvisioningJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export type ProvisioningStepStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
+
+export type TenantInfraOperationStatus = "queued" | "running" | "succeeded" | "failed" | string;
+
+export type TenantInfraOperationKind =
+  | "database_backup"
+  | "disable"
+  | "re_enable"
+  | "permanent_delete"
+  | string;
 
 export type ProvisionRestaurantRequest = {
   tenant_id?: TenantId;
@@ -312,6 +333,61 @@ export type RestaurantInfraState = {
   last_reenabled_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type TenantInfraOperationRequest = {
+  reason?: string | null;
+  confirm_restaurant_id?: TenantId | null;
+  confirm_slug?: string | null;
+};
+
+export type TenantOpsReceipt = {
+  operation_id: string;
+  restaurant_id: TenantId;
+  operation_kind: TenantInfraOperationKind;
+  operation_status: TenantInfraOperationStatus;
+  status_url: string;
+};
+
+export type TenantInfraDatabaseBackupManifest = {
+  backup_id: string;
+  restaurant_id: TenantId;
+  created_by_admin_user_id?: string | null;
+  postgres_backup_database_name: string;
+  manifest_status: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TenantInfraOperationStep = {
+  step_key: string;
+  step_order: number;
+  step_status: string;
+  resource_identifier?: string | null;
+  error_message?: string | null;
+  metadata: Record<string, unknown>;
+  started_at?: string | null;
+  finished_at?: string | null;
+};
+
+export type TenantInfraOperationSummary = {
+  operation_id: string;
+  restaurant_id?: TenantId | null;
+  restaurant_id_snapshot: TenantId;
+  operation_kind: TenantInfraOperationKind;
+  operation_status: TenantInfraOperationStatus;
+  failure_code?: string | null;
+  error_message?: string | null;
+  metadata: Record<string, unknown>;
+  started_at: string;
+  finished_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TenantInfraOperationDetail = TenantInfraOperationSummary & {
+  steps: TenantInfraOperationStep[];
 };
 
 export type RestaurantReadinessItem = {

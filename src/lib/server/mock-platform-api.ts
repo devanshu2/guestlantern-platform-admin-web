@@ -12,9 +12,14 @@ import type {
   RestaurantDatabaseConfig,
   RestaurantDirectoryItem,
   RestaurantDomain,
+  RestaurantInfraState,
   RestaurantInfraPrepareReceipt,
   RestaurantOperationalSummary,
-  RuntimeMetricsReport
+  RuntimeMetricsReport,
+  TenantInfraDatabaseBackupManifest,
+  TenantInfraOperationDetail,
+  TenantInfraOperationSummary,
+  TenantOpsReceipt
 } from "@/lib/api/types";
 
 const now = "2026-04-30 01:00:00+00";
@@ -37,6 +42,107 @@ const baseReceipt = {
   public_host: "smoke-provisioned.guestlantern.localhost",
   admin_host: "admin.smoke-provisioned.guestlantern.localhost"
 };
+
+const tenantInfraState: RestaurantInfraState = {
+  restaurant_id: restaurantId,
+  infra_state: "enabled",
+  db_owner_role_name: "tenant_smoke_provisioned_owner",
+  active_runtime_db_role_name: "tenant_smoke_provisioned_app",
+  runtime_role_generation: 1,
+  pgbouncer_alias: "tenant_smoke_provisioned",
+  garage_bucket: "gl-local-tenant-smoke-provisioned",
+  active_garage_key_name: "tenant-smoke-provisioned-runtime",
+  active_garage_access_key_id_secret_ref: "secret://smoke-provisioned-garage-access-key-id",
+  active_garage_secret_access_key_secret_ref: "secret://smoke-provisioned-garage-secret-access-key",
+  active_dragonfly_admin_user_secret_ref: "secret://smoke-provisioned-dragonfly-admin-user",
+  active_dragonfly_client_user_secret_ref: "secret://smoke-provisioned-dragonfly-client-user",
+  last_reenabled_at: now,
+  created_at: now,
+  updated_at: now
+};
+
+type MockTenantInfraOperation = TenantInfraOperationDetail & {
+  poll_count: number;
+};
+
+type TenantInfraMockState = {
+  infra: RestaurantInfraState;
+  operations: MockTenantInfraOperation[];
+  backups: TenantInfraDatabaseBackupManifest[];
+};
+
+const tenantInfraOperations: MockTenantInfraOperation[] = [
+  {
+    operation_id: "11111111-2222-4333-8444-555555555555",
+    restaurant_id: restaurantId,
+    restaurant_id_snapshot: restaurantId,
+    operation_kind: "database_backup",
+    operation_status: "succeeded",
+    metadata: { reason: "mock baseline database backup" },
+    started_at: now,
+    finished_at: now,
+    created_at: now,
+    updated_at: now,
+    steps: [
+      {
+        step_key: "postgres_database_backup",
+        step_order: 1,
+        step_status: "succeeded",
+        metadata: {},
+        started_at: now,
+        finished_at: now
+      },
+      {
+        step_key: "manifest",
+        step_order: 2,
+        step_status: "succeeded",
+        metadata: {},
+        started_at: now,
+        finished_at: now
+      }
+    ],
+    poll_count: 99
+  }
+];
+
+const databaseBackupManifests: TenantInfraDatabaseBackupManifest[] = [
+  {
+    backup_id: "backup-baseline-001",
+    restaurant_id: restaurantId,
+    created_by_admin_user_id: admin.admin_id,
+    postgres_backup_database_name: "tenant_smoke_provisioned_backup_baseline",
+    manifest_status: "available",
+    metadata: { source: "mock" },
+    created_at: now,
+    updated_at: now
+  }
+];
+
+const tenantInfraMockSessions = new Map<string, TenantInfraMockState>();
+let mockTokenSequence = 0;
+
+function createTenantInfraMockState(): TenantInfraMockState {
+  return {
+    infra: structuredClone(tenantInfraState),
+    operations: structuredClone(tenantInfraOperations),
+    backups: structuredClone(databaseBackupManifests)
+  };
+}
+
+const fallbackTenantInfraMockState = createTenantInfraMockState();
+
+function tenantInfraMockStateForRequest(request: Request): TenantInfraMockState {
+  const authorization = request.headers.get("authorization");
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return fallbackTenantInfraMockState;
+
+  const existing = tenantInfraMockSessions.get(token);
+  if (existing) return existing;
+
+  const state = createTenantInfraMockState();
+  tenantInfraMockSessions.set(token, state);
+  return state;
+}
 
 const domains: RestaurantDomain[] = [
   {
@@ -209,9 +315,13 @@ function error(code: string, message: string, status: number): Response {
 }
 
 function tokens(): PlatformAdminAuthTokens {
+  mockTokenSequence += 1;
+  const tokenSuffix = String(mockTokenSequence).padStart(6, "0");
+  const accessToken = `mock-access-token-${tokenSuffix}`;
+  tenantInfraMockSessions.set(accessToken, createTenantInfraMockState());
   return {
-    access_token: "mock-access-token",
-    refresh_token: "mock-refresh-token",
+    access_token: accessToken,
+    refresh_token: `mock-refresh-token-${tokenSuffix}`,
     token_type: "Bearer",
     expires_in_secs: 900,
     refresh_expires_in_secs: 2_592_000,
@@ -350,7 +460,7 @@ function auditEvents(jobId = succeededJobId): ProvisionRestaurantAuditEvent[] {
   ];
 }
 
-function operationalSummary(): RestaurantOperationalSummary {
+function operationalSummary(state: TenantInfraMockState): RestaurantOperationalSummary {
   return {
     restaurant: {
       restaurant_id: restaurantId,
@@ -368,24 +478,7 @@ function operationalSummary(): RestaurantOperationalSummary {
     domains,
     database_config: databaseConfig,
     auth_config: authConfig,
-    infra_state: {
-      restaurant_id: restaurantId,
-      infra_state: "enabled",
-      db_owner_role_name: "tenant_smoke_provisioned_owner",
-      active_runtime_db_role_name: "tenant_smoke_provisioned_app",
-      runtime_role_generation: 1,
-      pgbouncer_alias: "tenant_smoke_provisioned",
-      garage_bucket: "gl-local-tenant-smoke-provisioned",
-      active_garage_key_name: "tenant-smoke-provisioned-runtime",
-      active_garage_access_key_id_secret_ref: "secret://smoke-provisioned-garage-access-key-id",
-      active_garage_secret_access_key_secret_ref:
-        "secret://smoke-provisioned-garage-secret-access-key",
-      active_dragonfly_admin_user_secret_ref: "secret://smoke-provisioned-dragonfly-admin-user",
-      active_dragonfly_client_user_secret_ref: "secret://smoke-provisioned-dragonfly-client-user",
-      last_reenabled_at: now,
-      created_at: now,
-      updated_at: now
-    },
+    infra_state: state.infra,
     provisioning_readiness: {
       restaurant_id: restaurantId,
       ready: true,
@@ -409,10 +502,192 @@ async function requestBody(request: Request): Promise<Record<string, unknown>> {
   }
 }
 
+function pageFrom<T>(items: T[], url: URL): Page<T> {
+  const pageNumber = Number(url.searchParams.get("page") ?? 1);
+  const perPage = Number(url.searchParams.get("per_page") ?? 50);
+  const start = Math.max(0, (pageNumber - 1) * perPage);
+  return {
+    items: items.slice(start, start + perPage),
+    page: pageNumber,
+    per_page: perPage,
+    total: items.length
+  };
+}
+
+function tenantInfraOperationSummary(
+  operation: MockTenantInfraOperation
+): TenantInfraOperationSummary {
+  return {
+    operation_id: operation.operation_id,
+    restaurant_id: operation.restaurant_id,
+    restaurant_id_snapshot: operation.restaurant_id_snapshot,
+    operation_kind: operation.operation_kind,
+    operation_status: operation.operation_status,
+    failure_code: operation.failure_code,
+    error_message: operation.error_message,
+    metadata: operation.metadata,
+    started_at: operation.started_at,
+    finished_at: operation.finished_at,
+    created_at: operation.created_at,
+    updated_at: operation.updated_at
+  };
+}
+
+function setStepStatus(operation: MockTenantInfraOperation, status: string) {
+  operation.steps = operation.steps.map((step) => ({
+    ...step,
+    step_status: status,
+    started_at: step.started_at ?? now,
+    finished_at: status === "succeeded" ? now : step.finished_at
+  }));
+}
+
+function finalizeTenantInfraOperation(
+  state: TenantInfraMockState,
+  operation: MockTenantInfraOperation
+) {
+  if (operation.operation_status === "succeeded") return;
+  operation.operation_status = "succeeded";
+  operation.finished_at = now;
+  operation.updated_at = now;
+  setStepStatus(operation, "succeeded");
+
+  if (operation.operation_kind === "database_backup") {
+    const backupId = `backup-${operation.operation_id.slice(0, 8)}`;
+    if (!state.backups.some((backup) => backup.backup_id === backupId)) {
+      state.backups.unshift({
+        backup_id: backupId,
+        restaurant_id: restaurantId,
+        created_by_admin_user_id: admin.admin_id,
+        postgres_backup_database_name: `tenant_smoke_provisioned_backup_${operation.operation_id.slice(0, 8)}`,
+        manifest_status: "available",
+        metadata: { operation_id: operation.operation_id, source: "mock" },
+        created_at: now,
+        updated_at: now
+      });
+    }
+  }
+
+  if (operation.operation_kind === "disable") {
+    state.infra.infra_state = "disabled";
+    state.infra.active_runtime_db_role_name = null;
+    state.infra.active_garage_key_name = null;
+    state.infra.updated_at = now;
+  }
+
+  if (operation.operation_kind === "re_enable") {
+    state.infra.infra_state = "enabled";
+    state.infra.active_runtime_db_role_name = "tenant_smoke_provisioned_app_reenabled";
+    state.infra.active_garage_key_name = "tenant-smoke-provisioned-runtime-reenabled";
+    state.infra.runtime_role_generation += 1;
+    state.infra.last_reenabled_at = now;
+    state.infra.updated_at = now;
+  }
+}
+
+function tenantInfraOperationDetail(
+  state: TenantInfraMockState,
+  operationId: string
+): TenantInfraOperationDetail | null {
+  const operation = state.operations.find((item) => item.operation_id === operationId);
+  if (!operation) return null;
+
+  if (isActiveMockOperation(operation)) {
+    operation.poll_count += 1;
+    if (operation.poll_count === 1) {
+      operation.operation_status = "running";
+      operation.updated_at = now;
+      operation.steps = operation.steps.map((step, index) => ({
+        ...step,
+        step_status: index === 0 ? "running" : "pending",
+        started_at: index === 0 ? now : step.started_at
+      }));
+    } else {
+      finalizeTenantInfraOperation(state, operation);
+    }
+  }
+
+  return {
+    ...tenantInfraOperationSummary(operation),
+    steps: operation.steps
+  };
+}
+
+function isActiveMockOperation(operation: MockTenantInfraOperation): boolean {
+  return operation.operation_status === "queued" || operation.operation_status === "running";
+}
+
+function settlePolledTenantInfraOperations(state: TenantInfraMockState) {
+  for (const operation of state.operations) {
+    if (isActiveMockOperation(operation) && operation.poll_count > 0) {
+      finalizeTenantInfraOperation(state, operation);
+    }
+  }
+}
+
+function queueTenantInfraOperation(
+  state: TenantInfraMockState,
+  kind: "database_backup" | "disable" | "re_enable" | "permanent_delete",
+  body: Record<string, unknown>
+): Response {
+  const requiresReason = kind !== "database_backup";
+  if (requiresReason && typeof body.reason !== "string") {
+    return error("validation_error", "reason is required", 400);
+  }
+  if (requiresReason && body.confirm_restaurant_id !== restaurantId) {
+    return error("validation_error", "confirm_restaurant_id must match restaurant_id", 400);
+  }
+  if (kind === "permanent_delete" && body.confirm_slug !== baseReceipt.slug) {
+    return error("validation_error", "confirm_slug must match the current restaurant slug", 400);
+  }
+  const operationId = `22222222-3333-4444-8555-${String(state.operations.length + 1).padStart(
+    12,
+    "0"
+  )}`;
+  const operation: MockTenantInfraOperation = {
+    operation_id: operationId,
+    restaurant_id: restaurantId,
+    restaurant_id_snapshot: restaurantId,
+    operation_kind: kind,
+    operation_status: "queued",
+    metadata: { reason: body.reason ?? "tenant infra lifecycle operation queued" },
+    started_at: now,
+    created_at: now,
+    updated_at: now,
+    steps:
+      kind === "database_backup"
+        ? [
+            {
+              step_key: "postgres_database_backup",
+              step_order: 1,
+              step_status: "pending",
+              metadata: {}
+            },
+            { step_key: "manifest", step_order: 2, step_status: "pending", metadata: {} }
+          ]
+        : [
+            { step_key: "validate_state", step_order: 1, step_status: "pending", metadata: {} },
+            { step_key: "runtime_mutation", step_order: 2, step_status: "pending", metadata: {} },
+            { step_key: "persist_state", step_order: 3, step_status: "pending", metadata: {} }
+          ],
+    poll_count: 0
+  };
+  state.operations.unshift(operation);
+  const receipt: TenantOpsReceipt = {
+    operation_id: operation.operation_id,
+    restaurant_id: restaurantId,
+    operation_kind: kind,
+    operation_status: operation.operation_status,
+    status_url: `/platform/infra/operations/${operation.operation_id}`
+  };
+  return json(receipt, 202);
+}
+
 export async function mockPlatformApi(request: Request, path: string): Promise<Response> {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
   const routePath = path.split("?")[0] ?? path;
+  const tenantState = tenantInfraMockStateForRequest(request);
 
   if (method === "GET" && routePath === "/health/live") {
     return json({ status: "ok", surface: "platform_admin" });
@@ -430,6 +705,21 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
   if (method === "POST" && routePath === "/platform/auth/refresh") return json(tokens());
   if (method === "POST" && routePath === "/platform/auth/logout") {
     return json({ status: "logged_out", revoked_current_session: true });
+  }
+  if (method === "POST" && routePath === "/platform/auth/step-up") {
+    const body = await requestBody(request);
+    if (body.password !== "change-me-platform-admin-password") {
+      return error("unauthorized", "Platform admin password is invalid.", 401);
+    }
+    if (typeof body.scope !== "string" || !body.scope.startsWith("tenant_infra.")) {
+      return error("validation_error", "step-up scope is invalid", 400);
+    }
+    return json({
+      status: "granted",
+      scope: body.scope,
+      expires_in_secs: 300,
+      expires_at_unix: 1_777_777_777
+    });
   }
   if (method === "GET" && routePath === "/platform/bootstrap") {
     const response: PlatformBootstrapResponse = {
@@ -557,6 +847,13 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     }
   }
 
+  const tenantInfraOperationMatch = routePath.match(/^\/platform\/infra\/operations\/([^/]+)$/);
+  if (tenantInfraOperationMatch && method === "GET") {
+    const detail = tenantInfraOperationDetail(tenantState, tenantInfraOperationMatch[1]);
+    if (!detail) return error("not_found", "tenant infra operation was not found", 404);
+    return json(detail);
+  }
+
   const restaurantMatch = routePath.match(
     /^\/platform\/restaurants\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/
   );
@@ -565,7 +862,9 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     if (id !== restaurantId && !id.match(/^[0-9a-f-]{36}$/i)) {
       return error("bad_request", "restaurant id must be a valid UUID", 400);
     }
-    if (method === "GET" && resource === "operational-summary") return json(operationalSummary());
+    if (method === "GET" && resource === "operational-summary") {
+      return json(operationalSummary(tenantState));
+    }
     if (method === "GET" && resource === "domains") return json(domains);
     if (method === "POST" && resource === "domains") {
       const body = await requestBody(request);
@@ -592,6 +891,14 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     if (method === "PUT" && resource === "auth-config") {
       return json({ ...authConfig, ...(await requestBody(request)) });
     }
+    if (method === "GET" && resource === "infra" && !nested) return json(tenantState.infra);
+    if (method === "GET" && resource === "infra" && nested === "operations") {
+      settlePolledTenantInfraOperations(tenantState);
+      return json(pageFrom(tenantState.operations.map(tenantInfraOperationSummary), url));
+    }
+    if (method === "GET" && resource === "infra" && nested === "database-backups") {
+      return json(pageFrom(tenantState.backups, url));
+    }
     if (method === "POST" && resource === "infra" && nested === "prepare") {
       const receipt: RestaurantInfraPrepareReceipt = {
         job_id: "job-prepare-001",
@@ -599,6 +906,18 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
         job_status: "queued"
       };
       return json(receipt, 202);
+    }
+    if (method === "POST" && resource === "infra" && nested === "database-backup") {
+      return queueTenantInfraOperation(tenantState, "database_backup", await requestBody(request));
+    }
+    if (method === "POST" && resource === "infra" && nested === "disable") {
+      return queueTenantInfraOperation(tenantState, "disable", await requestBody(request));
+    }
+    if (method === "POST" && resource === "infra" && nested === "re-enable") {
+      return queueTenantInfraOperation(tenantState, "re_enable", await requestBody(request));
+    }
+    if (method === "POST" && resource === "infra" && nested === "permanent-delete") {
+      return queueTenantInfraOperation(tenantState, "permanent_delete", await requestBody(request));
     }
   }
 

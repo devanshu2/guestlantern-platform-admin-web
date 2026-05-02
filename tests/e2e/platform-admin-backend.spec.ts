@@ -11,7 +11,7 @@ async function login(page: import("@playwright/test").Page) {
 test("real Docker backend: provision, monitor, inspect restaurant, audit, and logout", async ({
   page
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
 
   const suffix = Date.now().toString(36);
   const slug = `web-e2e-${suffix}`;
@@ -61,8 +61,19 @@ test("real Docker backend: provision, monitor, inspect restaurant, audit, and lo
     page.getByRole("heading", { name: new RegExp(`Restaurant ${tenantId.slice(0, 8)}`) })
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: displayName })).toBeVisible();
-  await page.getByRole("button", { name: "Prepare infra" }).click();
-  await expect(page.getByText(/Infra prepare queued as job/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Database Backup" })).toBeEnabled({
+    timeout: 30_000
+  });
+  await page.getByRole("button", { name: "Database Backup" }).click();
+  const backupDialog = page.getByRole("dialog", { name: "Database Backup" });
+  await backupDialog
+    .getByLabel("Platform admin password")
+    .fill("change-me-platform-admin-password");
+  await backupDialog.getByRole("button", { name: "Confirm database backup" }).click();
+  await expect(page.getByText(/Database backup operation .* succeeded/i)).toBeVisible({
+    timeout: 90_000
+  });
+  await expect(page.getByRole("heading", { name: "Database backups" })).toBeVisible();
 
   await page.goto(`/audit?restaurant_id=${tenantId}`);
   await page.getByRole("button", { name: "Search" }).click();

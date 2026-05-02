@@ -3,7 +3,7 @@
 import { Play, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
-import { Badge, StatusBadge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/data-state";
 import { KeyValue } from "@/components/ui/key-value";
@@ -14,6 +14,7 @@ import { TableFrame } from "@/components/ui/table-frame";
 import { AuthConfigForm } from "@/features/restaurants/auth-config-form";
 import { DatabaseConfigForm } from "@/features/restaurants/database-config-form";
 import { DomainForm } from "@/features/restaurants/domain-form";
+import { TenantInfraLifecyclePanel } from "@/features/restaurants/tenant-infra-lifecycle-panel";
 import { platformApi } from "@/lib/api/client";
 import { useLoader } from "@/lib/api/hooks";
 import { errorMessage } from "@/lib/api/errors";
@@ -319,27 +320,11 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
             )}
           </Panel>
 
-          <Panel
-            title="Backend-blocked lifecycle operations"
-            description="These controls are intentionally visible as future scope, but disabled because the current OpenAPI has no matching routes."
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {["Backup", "Disable", "Re-enable", "Permanent delete"].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-lg border border-dashed border-line-strong bg-surface-muted p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-ink">{item}</p>
-                    <Badge tone="muted">Blocked</Badge>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-muted">
-                    Requires backend lifecycle endpoints and step-up policy before implementation.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Panel>
+          <TenantInfraLifecyclePanel
+            restaurantId={restaurantId}
+            summary={data}
+            onSummaryReload={summary.reload}
+          />
         </>
       ) : (
         <LoadingState>Loading restaurant operational summary...</LoadingState>

@@ -35,6 +35,8 @@ Repair guidance:
 
 Audit reads must be scoped by job ID, restaurant UUID, or both. The backend rejects unscoped audit browsing.
 
-## Backend-Blocked Lifecycle Ops
+## Tenant Infra Lifecycle Ops
 
-Backup, disable, re-enable, and permanent delete require backend lifecycle endpoints and step-up policy before the UI can execute them. V1 displays them as blocked so operators understand the intended future surface without creating fake controls.
+Open a restaurant summary to run tenant infra lifecycle operations. The UI uses the current tenant infra state, disables conflicting actions while provisioning or lifecycle work is active, and requires password step-up for each lifecycle scope.
+
+Database Backup creates a tenant Postgres database snapshot. Disable and re-enable require an operator reason plus restaurant ID confirmation. Permanent delete requires an operator reason plus exact restaurant ID and slug confirmation.
