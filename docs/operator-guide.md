@@ -40,3 +40,9 @@ Audit reads must be scoped by job ID, restaurant UUID, or both. The backend reje
 Open a restaurant summary to run tenant infra lifecycle operations. The UI uses the current tenant infra state, disables conflicting actions while provisioning or lifecycle work is active, and requires password step-up for each lifecycle scope.
 
 Database Backup creates a tenant Postgres database snapshot. Disable and re-enable require an operator reason plus restaurant ID confirmation. Permanent delete requires an operator reason plus exact restaurant ID and slug confirmation.
+
+Future lifecycle backlog:
+
+- Media backup: add a separate Garage/object-store backup operation and avoid presenting it as part of Database Backup.
+- Tenant data export: add an operator-facing export package for offboarding, migration, and support workflows.
+- GDPR/data-subject export and erasure workflows: add identity-verified, audited data-subject request handling with machine-readable exports and deletion tracking.

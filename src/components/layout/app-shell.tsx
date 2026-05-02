@@ -105,7 +105,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-line bg-surface/95 shadow-control backdrop-blur">
+        <header className="border-b border-line bg-surface/95 shadow-control backdrop-blur lg:sticky lg:top-0 lg:z-20">
           <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-6">
             <div className="flex items-center gap-3">
               <div className="lg:hidden">
@@ -118,7 +118,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 <h1 className="text-lg font-semibold text-ink">Platform operations</h1>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <div className="hidden rounded-lg border border-line bg-surface-muted px-3 py-2 text-xs text-muted sm:block lg:hidden">
                 <span className="block font-medium text-ink">
                   {admin?.display_name ?? "Operator"}
@@ -139,14 +139,14 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               </Button>
               <Link
                 href="/restaurants"
-                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-line bg-surface-raised px-3 py-2 text-sm font-semibold text-ink shadow-control hover:bg-surface-muted"
+                className="hidden min-h-10 items-center gap-2 rounded-md border border-line bg-surface-raised px-3 py-2 text-sm font-semibold text-ink shadow-control hover:bg-surface-muted sm:inline-flex"
               >
                 <Search aria-hidden className="h-4 w-4" />
                 Restaurant directory
               </Link>
               <Link
                 href="/jobs"
-                className="inline-flex min-h-10 items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-on-brand shadow-control hover:bg-brand-strong"
+                className="hidden min-h-10 items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-on-brand shadow-control hover:bg-brand-strong sm:inline-flex"
               >
                 <Activity aria-hidden className="h-4 w-4" />
                 Monitor jobs
@@ -154,7 +154,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <nav
-            className="flex gap-1 overflow-x-auto border-t border-line px-2 py-2 lg:hidden"
+            className="flex gap-1 overflow-x-auto border-t border-line px-2 py-2 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
             aria-label="Mobile navigation"
           >
             {navItems.map((item) => {
@@ -164,7 +164,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
+                  className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
                     active ? "bg-brand-soft text-brand" : "text-muted hover:bg-surface-muted"
                   }`}
                 >

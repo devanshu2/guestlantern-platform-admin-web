@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiError, normalizeError } from "@/lib/api/errors";
+import { ApiError, isErrorBody, normalizeError } from "@/lib/api/errors";
 import { CSRF_COOKIE } from "@/lib/security/cookie-names";
 import { CSRF_HEADER } from "@/lib/security/csrf";
 
@@ -26,7 +26,24 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
-export async function apiRequest<T>(url: string, options: RequestOptions = {}): Promise<T> {
+function isCsrfFailure(status: number, body: unknown): boolean {
+  return status === 403 && isErrorBody(body) && body.error.code === "csrf_failed";
+}
+
+async function refreshSessionForCsrf(): Promise<boolean> {
+  const response = await fetch("/api/auth/session", {
+    method: "GET",
+    cache: "no-store"
+  });
+  await parseBody(response);
+  return response.ok;
+}
+
+export async function apiRequest<T>(
+  url: string,
+  options: RequestOptions = {},
+  retryOnCsrfFailure = true
+): Promise<T> {
   const method = options.method ?? "GET";
   const headers = new Headers();
 
@@ -48,6 +65,10 @@ export async function apiRequest<T>(url: string, options: RequestOptions = {}): 
   const parsed = await parseBody(response);
 
   if (!response.ok) {
+    if (retryOnCsrfFailure && method !== "GET" && isCsrfFailure(response.status, parsed)) {
+      const refreshed = await refreshSessionForCsrf();
+      if (refreshed) return apiRequest<T>(url, options, false);
+    }
     throw normalizeError(response.status, parsed);
   }
 

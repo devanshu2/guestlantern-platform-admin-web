@@ -69,6 +69,10 @@ function isActiveOperation(status?: string | null): boolean {
   return Boolean(status && activeOperationStatuses.has(status));
 }
 
+function shortIdentifier(value: string) {
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
+}
+
 function statusPath(path: string): string {
   try {
     const parsed = new URL(path);
@@ -345,37 +349,71 @@ export function TenantInfraLifecyclePanel({
           <div>
             <h3 className="mb-2 text-sm font-semibold text-ink">Latest lifecycle operations</h3>
             {data.operations?.items.length ? (
-              <TableFrame>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Operation</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.operations.items.slice(0, 6).map((operation) => (
-                      <tr key={operation.operation_id}>
-                        <td>
-                          <div className="font-medium text-ink">
+              <>
+                <div className="grid gap-3 md:hidden">
+                  {data.operations.items.slice(0, 6).map((operation) => (
+                    <article
+                      key={operation.operation_id}
+                      className="rounded-md border border-line bg-surface-raised p-3 shadow-control"
+                    >
+                      <div className="grid gap-2">
+                        <div>
+                          <h4 className="text-sm font-semibold text-ink">
                             {statusLabel(operation.operation_kind)}
-                          </div>
-                          <div className="font-mono text-xs text-muted">
-                            {operation.operation_id}
-                          </div>
-                        </td>
-                        <td>
+                          </h4>
+                          <p
+                            className="mt-1 font-mono text-xs text-muted"
+                            title={operation.operation_id}
+                          >
+                            {shortIdentifier(operation.operation_id)}
+                          </p>
+                        </div>
+                        <div className="justify-self-start">
                           <StatusBadge status={operation.operation_status} />
-                        </td>
-                        <td className="text-xs text-muted">
-                          {formatDateTime(operation.updated_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableFrame>
+                        </div>
+                      </div>
+                      <dl className="mt-3 border-t border-line pt-3 text-xs">
+                        <dt className="font-semibold uppercase text-muted">Updated</dt>
+                        <dd className="mt-1 text-ink">{formatDateTime(operation.updated_at)}</dd>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="hidden md:block">
+                  <TableFrame>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Operation</th>
+                          <th>Status</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.operations.items.slice(0, 6).map((operation) => (
+                          <tr key={operation.operation_id}>
+                            <td>
+                              <div className="font-medium text-ink">
+                                {statusLabel(operation.operation_kind)}
+                              </div>
+                              <div className="font-mono text-xs text-muted">
+                                {operation.operation_id}
+                              </div>
+                            </td>
+                            <td>
+                              <StatusBadge status={operation.operation_status} />
+                            </td>
+                            <td className="text-xs text-muted">
+                              {formatDateTime(operation.updated_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </TableFrame>
+                </div>
+              </>
             ) : (
               <Alert tone="info">No lifecycle operations recorded for this restaurant.</Alert>
             )}
@@ -384,33 +422,72 @@ export function TenantInfraLifecyclePanel({
           <div>
             <h3 className="mb-2 text-sm font-semibold text-ink">Database backups</h3>
             {data.backups?.items.length ? (
-              <TableFrame>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Backup database</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.backups.items.slice(0, 6).map((backup) => (
-                      <tr key={backup.backup_id}>
-                        <td>
-                          <div className="font-mono text-xs text-ink">
+              <>
+                <div className="grid gap-3 md:hidden">
+                  {data.backups.items.slice(0, 6).map((backup) => (
+                    <article
+                      key={backup.backup_id}
+                      className="rounded-md border border-line bg-surface-raised p-3 shadow-control"
+                    >
+                      <div className="grid gap-2">
+                        <div>
+                          <h4
+                            className="font-mono text-xs font-semibold leading-5 text-ink [overflow-wrap:anywhere]"
+                            data-testid="database-backup-name"
+                          >
                             {backup.postgres_backup_database_name}
-                          </div>
-                          <div className="font-mono text-xs text-muted">{backup.backup_id}</div>
-                        </td>
-                        <td>
+                          </h4>
+                          <p className="mt-1 font-mono text-xs text-muted" title={backup.backup_id}>
+                            {shortIdentifier(backup.backup_id)}
+                          </p>
+                        </div>
+                        <div className="justify-self-start">
                           <StatusBadge status={backup.manifest_status} />
-                        </td>
-                        <td className="text-xs text-muted">{formatDateTime(backup.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableFrame>
+                        </div>
+                      </div>
+                      <dl className="mt-3 border-t border-line pt-3 text-xs">
+                        <dt className="font-semibold uppercase text-muted">Created</dt>
+                        <dd className="mt-1 text-ink">{formatDateTime(backup.created_at)}</dd>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="hidden md:block">
+                  <TableFrame>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Backup database</th>
+                          <th>Status</th>
+                          <th>Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.backups.items.slice(0, 6).map((backup) => (
+                          <tr key={backup.backup_id}>
+                            <td>
+                              <div
+                                className="font-mono text-xs text-ink"
+                                data-testid="database-backup-name"
+                              >
+                                {backup.postgres_backup_database_name}
+                              </div>
+                              <div className="font-mono text-xs text-muted">{backup.backup_id}</div>
+                            </td>
+                            <td>
+                              <StatusBadge status={backup.manifest_status} />
+                            </td>
+                            <td className="text-xs text-muted">
+                              {formatDateTime(backup.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </TableFrame>
+                </div>
+              </>
             ) : (
               <Alert tone="info">
                 No tenant Postgres database snapshots are recorded for this restaurant.

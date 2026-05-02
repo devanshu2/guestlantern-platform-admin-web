@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { themeStorageKey, type ThemeMode, type ThemePreset } from "@/components/theme/theme-config";
+import { CSRF_COOKIE } from "@/lib/security/cookie-names";
 
 type VisualTheme = {
   name: string;
@@ -69,7 +70,7 @@ async function expectDashboardLoaded(page: Page) {
   await expect(
     page.locator('[data-counter-name="restaurant_provisioning.jobs_failed_current"]')
   ).toBeVisible();
-  await expect(page.locator("tbody tr").first()).toBeVisible();
+  await expect(page.locator('[data-testid="job-list-item"]:visible').first()).toBeVisible();
 }
 
 test("dashboard loads with accessible core landmarks", async ({ page }) => {
@@ -77,7 +78,7 @@ test("dashboard loads with accessible core landmarks", async ({ page }) => {
 
   await expect(page.getByText("Backend readiness")).toBeVisible();
   await expect(page.getByText("Recent provisioning jobs")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Monitor jobs" })).toBeVisible();
+  await expect(page.locator('a[href="/jobs"]:visible').first()).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
@@ -240,6 +241,25 @@ test("opens restaurant summary and queues infra prepare", async ({ page }) => {
   await expect(page.getByText(/Infra prepare queued as job/)).toBeVisible();
 });
 
+test("repairs missing csrf cookie before saving restaurant config", async ({ page }) => {
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByRole("button", { name: "Save database config" })).toBeVisible();
+
+  const cookies = await page.context().cookies();
+  await page.context().clearCookies();
+  await page.context().addCookies(cookies.filter((cookie) => cookie.name !== CSRF_COOKIE));
+
+  await page.getByRole("button", { name: "Save database config" }).click();
+
+  await expect(
+    page.getByText(
+      "Database config saved. Backend marks it pending until infra prepare verifies it."
+    )
+  ).toBeVisible();
+  await expect(page.getByText("Security check failed")).toBeHidden();
+});
+
 test("queues a database backup lifecycle operation with step-up", async ({ page }) => {
   await login(page);
   await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
@@ -254,7 +274,11 @@ test("queues a database backup lifecycle operation with step-up", async ({ page 
   await expect(page.getByText(/Database backup operation .* succeeded/i)).toBeVisible({
     timeout: 12_000
   });
-  await expect(page.getByText("tenant_smoke_provisioned_backup_22222222")).toBeVisible();
+  await expect(
+    page
+      .locator('[data-testid="database-backup-name"]:visible')
+      .filter({ hasText: "tenant_smoke_provisioned_backup_22222222" })
+  ).toBeVisible();
 });
 
 test("requires lifecycle confirmations and disables controls during active operations", async ({
@@ -352,7 +376,7 @@ test.describe("branded visual baselines", () => {
       await page.goto("/jobs");
       await expectTheme(page, theme);
       await expect(page.getByRole("heading", { name: "Provisioning jobs" })).toBeVisible();
-      await expect(page.locator("tbody tr")).toHaveCount(3);
+      await expect(page.locator('[data-testid="job-list-item"]:visible')).toHaveCount(3);
       await waitForScreenshotReady(page);
       await expect(page).toHaveScreenshot(`jobs-${theme.name}.png`, screenshotOptions);
 

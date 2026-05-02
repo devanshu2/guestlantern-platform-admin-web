@@ -158,34 +158,74 @@ export function JobDetailPage({ jobId }: { jobId: string }) {
             title="Provisioning steps"
             description="Steps are displayed in backend execution order. Error text is shown only when the backend returns it."
           >
-            <TableFrame>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Step key</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Finished</th>
-                    <th>Error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {job.steps.map((step) => (
-                    <tr key={step.step_key}>
-                      <td>{step.step_order}</td>
-                      <td className="font-mono text-xs">{step.step_key}</td>
-                      <td>
-                        <StatusBadge status={step.step_status} />
-                      </td>
-                      <td className="text-xs text-muted">{formatDateTime(step.started_at)}</td>
-                      <td className="text-xs text-muted">{formatDateTime(step.finished_at)}</td>
-                      <td className="text-xs text-danger">{step.error_message ?? ""}</td>
+            <ol className="m-0 grid list-none gap-3 p-0 md:hidden">
+              {job.steps.map((step) => (
+                <li
+                  key={step.step_key}
+                  className="rounded-md border border-line bg-surface-raised p-3 shadow-control"
+                >
+                  <div className="grid gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase text-muted">
+                        Step {step.step_order}
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-ink [overflow-wrap:anywhere]">
+                        {step.step_key}
+                      </p>
+                    </div>
+                    <div className="justify-self-start">
+                      <StatusBadge status={step.step_status} />
+                    </div>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-line pt-3 text-xs">
+                    <div>
+                      <dt className="font-semibold uppercase text-muted">Started</dt>
+                      <dd className="mt-1 text-ink">{formatDateTime(step.started_at)}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold uppercase text-muted">Finished</dt>
+                      <dd className="mt-1 text-ink">{formatDateTime(step.finished_at)}</dd>
+                    </div>
+                  </dl>
+                  {step.error_message ? (
+                    <p className="mt-3 rounded-md border border-danger-line bg-danger-soft p-2 text-xs leading-5 text-danger [overflow-wrap:anywhere]">
+                      {step.error_message}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+
+            <div className="hidden md:block">
+              <TableFrame>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Order</th>
+                      <th>Step key</th>
+                      <th>Status</th>
+                      <th>Started</th>
+                      <th>Finished</th>
+                      <th>Error</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableFrame>
+                  </thead>
+                  <tbody>
+                    {job.steps.map((step) => (
+                      <tr key={step.step_key}>
+                        <td>{step.step_order}</td>
+                        <td className="font-mono text-xs">{step.step_key}</td>
+                        <td>
+                          <StatusBadge status={step.step_status} />
+                        </td>
+                        <td className="text-xs text-muted">{formatDateTime(step.started_at)}</td>
+                        <td className="text-xs text-muted">{formatDateTime(step.finished_at)}</td>
+                        <td className="text-xs text-danger">{step.error_message ?? ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableFrame>
+            </div>
           </Panel>
 
           {job.receipt ? (
