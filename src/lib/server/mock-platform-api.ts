@@ -4,6 +4,7 @@ import type {
   PlatformBootstrapResponse,
   ProvisionRestaurantAuditEvent,
   ProvisionRestaurantJobReceipt,
+  ProvisionRestaurantPreview,
   ProvisionRestaurantJobStatus,
   ProvisionRestaurantJobSummary,
   ProvisionRestaurantJobTimeline,
@@ -27,6 +28,22 @@ const restaurantId = "33333333-3333-4333-8333-333333333333";
 const failedJobId = "job-failed-001";
 const runningJobId = "job-running-001";
 const succeededJobId = "job-succeeded-001";
+
+function fnv1a32(value: string) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+function defaultDatabaseName(slug: string) {
+  const candidate = `tenant_${slug.replaceAll("-", "_")}`;
+  if (candidate.length <= 48) return candidate;
+  const suffix = fnv1a32(candidate).toString(16).padStart(8, "0");
+  return `${candidate.slice(0, 48 - suffix.length - 1)}_${suffix}`;
+}
 
 const admin = {
   session_id: "11111111-1111-4111-8111-111111111111",
@@ -494,6 +511,61 @@ function operationalSummary(state: TenantInfraMockState): RestaurantOperationalS
   };
 }
 
+function provisionPreview(body: Record<string, unknown>): ProvisionRestaurantPreview {
+  const slug = typeof body.slug === "string" && body.slug ? body.slug : baseReceipt.slug;
+  const tenantId =
+    typeof body.tenant_id === "string" && body.tenant_id ? body.tenant_id : restaurantId;
+  const managedHost = `${slug}.guestlantern.localhost`;
+  const domain =
+    body.domain && typeof body.domain === "object" ? (body.domain as Record<string, unknown>) : {};
+  const domainHost =
+    "host" in domain && typeof domain.host === "string" && domain.host ? domain.host : managedHost;
+  const domainType =
+    "domain_type" in domain && domain.domain_type === "custom" ? "custom" : "subdomain";
+  const schemaVersion =
+    typeof body.schema_version === "string" && body.schema_version
+      ? body.schema_version
+      : "restaurant_template/0001_init.sql";
+
+  return {
+    tenant_id: tenantId,
+    slug,
+    managed_public_host: managedHost,
+    public_host: domainHost,
+    admin_host: `admin.${domainHost}`,
+    domain: {
+      managed_host: managedHost,
+      host: domainHost,
+      domain_type: domainType,
+      is_primary: true
+    },
+    database: {
+      db_name: defaultDatabaseName(slug),
+      db_host: "127.0.0.1",
+      db_port: 16432,
+      db_user_secret_ref: `secret://${slug}-db-user`,
+      db_password_secret_ref: `secret://${slug}-db-password`,
+      schema_version: schemaVersion,
+      connection_options: {}
+    },
+    auth: {
+      issuer: domainHost,
+      audience: `tenant-${slug}-clients`,
+      signing_algorithm: "HS256",
+      jwt_secret_ref: `secret://${slug}-jwt-secret`,
+      access_token_ttl_seconds: 900,
+      refresh_token_ttl_seconds: 2_592_000,
+      allow_dev_static_otp: true,
+      dev_static_otp_code: "123456"
+    },
+    capabilities: {
+      environment: "development",
+      allow_dev_static_otp_supported: true,
+      secret_store_backend: "generated_env"
+    }
+  };
+}
+
 async function requestBody(request: Request): Promise<Record<string, unknown>> {
   try {
     return (await request.json()) as Record<string, unknown>;
@@ -731,6 +803,11 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
         access_token_ttl_secs: 900,
         refresh_token_ttl_secs: 2_592_000
       },
+      provisioning: {
+        environment: "development",
+        allow_dev_static_otp_supported: true,
+        secret_store_backend: "generated_env"
+      },
       current_admin: admin
     };
     return json(response);
@@ -784,16 +861,19 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     return json(page);
   }
 
+  if (method === "POST" && routePath === "/platform/restaurants/provision/preview") {
+    return json(provisionPreview(await requestBody(request)));
+  }
+
   if (method === "POST" && routePath === "/platform/restaurants/provision") {
     const body = await requestBody(request);
-    const slug = typeof body.slug === "string" ? body.slug : baseReceipt.slug;
+    const preview = provisionPreview(body);
     const receipt: ProvisionRestaurantJobReceipt = {
       job_id: "job-new-001",
-      tenant_id:
-        typeof body.tenant_id === "string" && body.tenant_id ? body.tenant_id : restaurantId,
-      slug,
-      public_host: `${slug}.guestlantern.localhost`,
-      admin_host: `admin.${slug}.guestlantern.localhost`,
+      tenant_id: preview.tenant_id,
+      slug: preview.slug,
+      public_host: preview.public_host,
+      admin_host: preview.admin_host,
       job_status: "queued"
     };
     return json(receipt, 202);
@@ -868,28 +948,37 @@ export async function mockPlatformApi(request: Request, path: string): Promise<R
     if (method === "GET" && resource === "domains") return json(domains);
     if (method === "POST" && resource === "domains") {
       const body = await requestBody(request);
-      return json(
-        {
-          id: "domain-created",
-          restaurant_id: id,
-          host: body.host ?? "custom.guestlantern.localhost",
-          domain_type: body.domain_type ?? "custom",
-          is_primary: Boolean(body.is_primary),
-          is_active: true,
-          verified_at: now,
-          created_at: now,
-          updated_at: now
-        },
-        201
-      );
+      if (body.is_primary) {
+        domains.forEach((domain) => {
+          domain.is_primary = false;
+        });
+      }
+      const domain: RestaurantDomain = {
+        id: `domain-created-${domains.length + 1}`,
+        restaurant_id: id,
+        host: String(body.host ?? "custom.guestlantern.localhost"),
+        domain_type: String(body.domain_type ?? "custom"),
+        is_primary: Boolean(body.is_primary),
+        is_active: true,
+        verified_at: now,
+        created_at: now,
+        updated_at: now
+      };
+      domains.unshift(domain);
+      return json(domain, 201);
     }
     if (method === "GET" && resource === "database-config") return json(databaseConfig);
     if (method === "PUT" && resource === "database-config") {
-      return json({ ...databaseConfig, ...(await requestBody(request)), status: "pending" });
+      Object.assign(databaseConfig, await requestBody(request), {
+        status: "pending",
+        updated_at: now
+      });
+      return json(databaseConfig);
     }
     if (method === "GET" && resource === "auth-config") return json(authConfig);
     if (method === "PUT" && resource === "auth-config") {
-      return json({ ...authConfig, ...(await requestBody(request)) });
+      Object.assign(authConfig, await requestBody(request), { updated_at: now });
+      return json(authConfig);
     }
     if (method === "GET" && resource === "infra" && !nested) return json(tenantState.infra);
     if (method === "GET" && resource === "infra" && nested === "operations") {

@@ -8,16 +8,25 @@ import { CheckboxField, Field } from "@/components/ui/field";
 import { platformApi } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errors";
 import type { RestaurantAuthConfig, RestaurantAuthConfigRequest } from "@/lib/api/types";
-import { authConfigSchema } from "@/lib/validation/platform";
+import { authConfigSchema, formatValidationIssue } from "@/lib/validation/platform";
+import {
+  AdvancedRepairConfirmation,
+  type AdvancedRepairChange
+} from "./advanced-repair-confirmation";
+import { pollProvisioningJobUntilTerminal, queueInfraPrepare } from "./infra-prepare";
 
 export function AuthConfigForm({
   restaurantId,
+  restaurantSlug,
   config,
-  onSaved
+  onSaved,
+  queuePrepareOnRuntimeChange = false
 }: {
   restaurantId: string;
+  restaurantSlug?: string;
   config?: RestaurantAuthConfig | null;
   onSaved: () => Promise<void> | void;
+  queuePrepareOnRuntimeChange?: boolean;
 }) {
   const initial = useMemo(
     () => ({
@@ -33,12 +42,44 @@ export function AuthConfigForm({
     [config]
   );
   const [form, setForm] = useState(initial);
+  const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const validationLabels = {
+    issuer: "Issuer",
+    audience: "Audience",
+    signing_algorithm: "Signing algorithm",
+    jwt_secret_ref: "JWT secret ref",
+    access_token_ttl_seconds: "Access token TTL seconds",
+    refresh_token_ttl_seconds: "Refresh token TTL seconds",
+    dev_static_otp_code: "Development static OTP code"
+  };
+
   useEffect(() => {
     setForm(initial);
+    setConfirmation("");
   }, [initial]);
+
+  const riskyChanges = useMemo<AdvancedRepairChange[]>(() => {
+    if (!config) return [];
+    const compare = [
+      ["Issuer", config.issuer, form.issuer],
+      ["Audience", config.audience, form.audience],
+      ["Signing algorithm", config.signing_algorithm, form.signing_algorithm],
+      ["JWT secret ref", config.jwt_secret_ref, form.jwt_secret_ref]
+    ] satisfies [string, string, string][];
+
+    return compare
+      .filter(([, before, after]) => before.trim() !== after.trim())
+      .map(([label, before, after]) => ({
+        label,
+        before: before || "(empty)",
+        after: after || "(empty)"
+      }));
+  }, [config, form]);
+
+  const confirmationValue = restaurantSlug ?? restaurantId;
 
   function update(name: keyof typeof form, value: string | boolean) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -47,7 +88,10 @@ export function AuthConfigForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage(null);
-    setLoading(true);
+    if (riskyChanges.length > 0 && confirmation.trim() !== confirmationValue) {
+      setMessage(`Type ${confirmationValue} to confirm advanced auth repair.`);
+      return;
+    }
     try {
       const payload: RestaurantAuthConfigRequest = {
         issuer: form.issuer,
@@ -59,12 +103,37 @@ export function AuthConfigForm({
         allow_dev_static_otp: form.allow_dev_static_otp,
         dev_static_otp_code: form.dev_static_otp_code || null
       };
-      const parsed = authConfigSchema.parse(payload);
+      const parsed = authConfigSchema.safeParse(payload);
+      if (!parsed.success) {
+        setMessage(formatValidationIssue(parsed.error, validationLabels));
+        return;
+      }
+      setLoading(true);
       await platformApi<RestaurantAuthConfig>(`/restaurants/${restaurantId}/auth-config`, {
         method: "PUT",
-        body: parsed
+        body: parsed.data
       });
-      setMessage("Auth config saved. Tenant JWT and development OTP settings were updated.");
+      const shouldPrepare =
+        queuePrepareOnRuntimeChange &&
+        (!config ||
+          parsed.data.issuer !== config.issuer ||
+          parsed.data.audience !== config.audience ||
+          parsed.data.signing_algorithm !== config.signing_algorithm ||
+          parsed.data.jwt_secret_ref !== config.jwt_secret_ref);
+      let nextMessage = "Auth config saved. Tenant JWT and development OTP settings were updated.";
+      if (shouldPrepare) {
+        const receipt = await queueInfraPrepare(restaurantId);
+        nextMessage = `${nextMessage} Infra prepare queued as job ${receipt.job_id}.`;
+        void pollProvisioningJobUntilTerminal(
+          receipt.job_id,
+          (status) =>
+            setMessage(
+              `Auth config saved. Infra prepare job ${status.job_id} finished with ${status.job_status}.`
+            ),
+          (pollError) => setMessage(pollError)
+        );
+      }
+      setMessage(nextMessage);
       await onSaved();
     } catch (err) {
       setMessage(errorMessage(err));
@@ -75,6 +144,12 @@ export function AuthConfigForm({
 
   return (
     <form className="space-y-4" onSubmit={submit}>
+      {queuePrepareOnRuntimeChange ? (
+        <Alert tone="warning" title="Advanced auth repair can disrupt a running restaurant">
+          Auth identity or secret-reference changes can break existing sessions, tenant clients, or
+          token validation. Treat these as maintenance-window operations in production.
+        </Alert>
+      ) : null}
       {message ? (
         <Alert tone={message.includes("saved") ? "success" : "danger"} live>
           {message}
@@ -86,7 +161,7 @@ export function AuthConfigForm({
           name="issuer"
           value={form.issuer}
           onChange={(event) => update("issuer", event.target.value)}
-          helper="Tenant token issuer host. Example: smoke-provisioned.guestlantern.localhost."
+          helper="Changing issuer can break tenant app authentication. Example: smoke-provisioned.guestlantern.localhost."
           required
         />
         <Field
@@ -94,7 +169,7 @@ export function AuthConfigForm({
           name="audience"
           value={form.audience}
           onChange={(event) => update("audience", event.target.value)}
-          helper="Tenant token audience. Example: tenant-smoke-provisioned-clients."
+          helper="Changing audience can break tenant app authentication. Example: tenant-smoke-provisioned-clients."
           required
         />
         <Field
@@ -102,7 +177,7 @@ export function AuthConfigForm({
           name="signing_algorithm"
           value={form.signing_algorithm}
           onChange={(event) => update("signing_algorithm", event.target.value)}
-          helper="Current backend supports HS256."
+          helper="Changing the signing algorithm can break token validation. Current backend supports HS256."
           required
         />
         <Field
@@ -110,7 +185,7 @@ export function AuthConfigForm({
           name="jwt_secret_ref"
           value={form.jwt_secret_ref}
           onChange={(event) => update("jwt_secret_ref", event.target.value)}
-          helper="Secret reference only. Example: secret://smoke-provisioned-jwt-secret."
+          helper="Secret reference only. Changing this can invalidate existing tokens and sessions."
           required
         />
         <Field
@@ -145,6 +220,13 @@ export function AuthConfigForm({
         value={form.dev_static_otp_code}
         onChange={(event) => update("dev_static_otp_code", event.target.value)}
         helper="Optional six digit code when static OTP is enabled. Example: 123456."
+      />
+      <AdvancedRepairConfirmation
+        title="Confirm auth repair"
+        changes={riskyChanges}
+        confirmationValue={confirmationValue}
+        value={confirmation}
+        onChange={setConfirmation}
       />
       <Button type="submit" loading={loading} icon={<Save aria-hidden className="h-4 w-4" />}>
         Save auth config

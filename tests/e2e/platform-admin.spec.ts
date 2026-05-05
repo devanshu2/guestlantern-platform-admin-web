@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { themeStorageKey, type ThemeMode, type ThemePreset } from "@/components/theme/theme-config";
 import { CSRF_COOKIE } from "@/lib/security/cookie-names";
@@ -218,6 +218,202 @@ test("queues a provisioning request", async ({ page }) => {
   await expect(page.getByLabel("Schema version")).toHaveValue("restaurant_template/0001_init.sql");
 });
 
+test("blocks missing required create fields before provisioning request", async ({ page }) => {
+  const provisionBodies: Array<Record<string, unknown>> = [];
+  await page.route("**/api/platform/restaurants/provision", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      provisionBodies.push(JSON.parse(request.postData() ?? "{}"));
+    }
+    await route.continue();
+  });
+
+  await login(page);
+  await page.goto("/provision");
+
+  await page.getByLabel("Slug").fill("missing-required-fields");
+  await page.getByRole("button", { name: "Queue provisioning" }).click();
+
+  await expect(page.getByText("Provisioning queued")).toBeHidden();
+  await expect(page.getByLabel("External code")).toBeVisible();
+  expect(provisionBodies).toHaveLength(0);
+});
+
+test("loads provisioning preview and submits advanced config atomically", async ({ page }) => {
+  const provisionBodies: Array<Record<string, unknown>> = [];
+  await page.route("**/api/platform/restaurants/provision", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      provisionBodies.push(JSON.parse(request.postData() ?? "{}"));
+    }
+    await route.continue();
+  });
+
+  await login(page);
+  await page.goto("/provision");
+
+  await page.getByLabel("External code").fill("SMOKE-PROVISIONED");
+  await page.getByLabel("Slug").fill("smoke-provisioned");
+  await page.getByLabel("Legal name").fill("Smoke Provisioned Foods Pvt Ltd");
+  await page.getByLabel("Display name").fill("Smoke Provisioned Foods");
+  await page.getByLabel("Owner full name").fill("Smoke Owner");
+  await page.getByLabel("Owner phone number").fill("+913333333333");
+  await page.getByLabel("Owner email").fill("owner@smoke-provisioned.test");
+
+  await page.getByRole("button", { name: "Load suggestions" }).click();
+  await expect(page.getByText("Managed public host")).toBeVisible();
+  await expect(page.getByText("Effective public host")).toBeVisible();
+  await expect(page.getByText("Admin host")).toBeVisible();
+  await expect(page.getByText("Environment")).toBeVisible();
+  await expect(page.getByText("development", { exact: true })).toBeVisible();
+  await expect(page.getByText("Secret store")).toBeVisible();
+  await expect(page.getByText("generated_env", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Primary host")).toHaveValue(
+    "smoke-provisioned.guestlantern.localhost"
+  );
+  await expect(page.getByLabel("Database name")).toHaveValue("tenant_smoke_provisioned");
+  await expect(page.getByLabel("Database host")).toHaveValue("127.0.0.1");
+  await expect(page.getByLabel("DB schema version")).toHaveValue(
+    "restaurant_template/0001_init.sql"
+  );
+  await expect(page.getByLabel("Issuer")).toHaveValue("smoke-provisioned.guestlantern.localhost");
+  await expect(page.getByLabel("Audience")).toHaveValue("tenant-smoke-provisioned-clients");
+  await expect(page.getByLabel("Signing algorithm")).toHaveValue("HS256");
+  await expect(page.getByLabel("JWT secret ref")).toHaveValue(
+    "secret://smoke-provisioned-jwt-secret"
+  );
+  await expect(page.getByLabel("Access token TTL seconds")).toHaveValue("900");
+  await expect(page.getByLabel("Refresh token TTL seconds")).toHaveValue("2592000");
+  await expect(page.getByLabel("Allow development static OTP")).toBeChecked();
+  await expect(page.getByLabel("Development static OTP code")).toHaveValue("123456");
+  await page.getByLabel("Access token TTL seconds").fill("1200");
+  await page.getByRole("button", { name: "Queue provisioning" }).click();
+
+  await expect(page.getByText("Provisioning queued")).toBeVisible();
+  expect(provisionBodies).toHaveLength(1);
+  const provisionBody = provisionBodies[0] as {
+    auth?: Record<string, unknown>;
+    database?: Record<string, unknown>;
+  };
+  expect(provisionBody).toMatchObject({
+    slug: "smoke-provisioned",
+    domain: {
+      host: "smoke-provisioned.guestlantern.localhost",
+      domain_type: "subdomain",
+      is_primary: true
+    },
+    database: {
+      db_name: "tenant_smoke_provisioned",
+      db_user_secret_ref: "secret://smoke-provisioned-db-user",
+      db_password_secret_ref: "secret://smoke-provisioned-db-password"
+    },
+    auth: {
+      issuer: "smoke-provisioned.guestlantern.localhost",
+      jwt_secret_ref: "secret://smoke-provisioned-jwt-secret",
+      access_token_ttl_seconds: 1200
+    }
+  });
+  expect(provisionBody.database ?? {}).not.toHaveProperty("db_password");
+  expect(provisionBody.database ?? {}).not.toHaveProperty("db_user");
+  expect(provisionBody.auth ?? {}).not.toHaveProperty("jwt_secret");
+});
+
+test("surfaces invalid advanced provisioning values before create request", async ({ page }) => {
+  const provisionBodies: Array<Record<string, unknown>> = [];
+  await page.route("**/api/platform/restaurants/provision", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      provisionBodies.push(JSON.parse(request.postData() ?? "{}"));
+    }
+    await route.continue();
+  });
+
+  await login(page);
+  await page.goto("/provision");
+
+  await page.getByLabel("External code").fill("SMOKE-PROVISIONED");
+  await page.getByLabel("Slug").fill("smoke-provisioned");
+  await page.getByLabel("Legal name").fill("Smoke Provisioned Foods Pvt Ltd");
+  await page.getByLabel("Display name").fill("Smoke Provisioned Foods");
+  await page.getByLabel("Owner full name").fill("Smoke Owner");
+  await page.getByLabel("Owner phone number").fill("+913333333333");
+  await page.getByLabel("Owner email").fill("owner@smoke-provisioned.test");
+  await page.getByRole("button", { name: "Load suggestions" }).click();
+  await expect(page.getByText("Managed public host")).toBeVisible();
+
+  async function expectInvalid(
+    field: Locator,
+    invalidValue: string,
+    expectedMessage: string,
+    resetValue: string
+  ) {
+    await field.fill(invalidValue);
+    await page.getByRole("button", { name: "Queue provisioning" }).click();
+    await expect(page.getByText(expectedMessage)).toBeVisible();
+    expect(provisionBodies).toHaveLength(0);
+    await field.fill(resetValue);
+  }
+
+  await expectInvalid(
+    page.getByLabel("Database name"),
+    "tenant smoke",
+    "Database name: Start with a lowercase letter and use only lowercase letters, numbers, and underscores.",
+    "tenant_smoke_provisioned"
+  );
+  await expectInvalid(
+    page.getByLabel("Database name"),
+    "Tenant-Smoke",
+    "Database name: Start with a lowercase letter and use only lowercase letters, numbers, and underscores.",
+    "tenant_smoke_provisioned"
+  );
+  await expectInvalid(
+    page.getByLabel("Database name"),
+    `tenant_${"a".repeat(50)}`,
+    "Database name: Use 48 characters or fewer.",
+    "tenant_smoke_provisioned"
+  );
+  await expectInvalid(
+    page.getByLabel("Database name"),
+    "postgres",
+    "Database name: Use a tenant database name, not a reserved Postgres database.",
+    "tenant_smoke_provisioned"
+  );
+  await expectInvalid(
+    page.getByLabel("Primary host"),
+    "https://bad host:8443/path",
+    "Primary host: Use a lowercase hostname with letters, numbers, dots, and hyphens.",
+    "smoke-provisioned.guestlantern.localhost"
+  );
+  await expectInvalid(
+    page.getByLabel("DB user secret ref"),
+    "plain-secret",
+    "DB user secret ref: Use a secret ref such as secret://tenant-db-password.",
+    "secret://smoke-provisioned-db-user"
+  );
+  await expectInvalid(
+    page.getByLabel("DB schema version"),
+    "../schema.sql",
+    "DB schema version: Use a relative schema path.",
+    "restaurant_template/0001_init.sql"
+  );
+  await expectInvalid(
+    page.getByLabel("Development static OTP code"),
+    "12AB56",
+    "Development static OTP code: Use a 6 digit static OTP.",
+    "123456"
+  );
+
+  await page.getByLabel("Access token TTL seconds").fill("1200");
+  await page.getByLabel("Refresh token TTL seconds").fill("900");
+  await page.getByRole("button", { name: "Queue provisioning" }).click();
+  await expect(
+    page.getByText(
+      "Refresh token TTL seconds: Refresh token TTL must be greater than access token TTL."
+    )
+  ).toBeVisible();
+  expect(provisionBodies).toHaveLength(0);
+});
+
 test("opens job detail and confirms retry", async ({ page }) => {
   await login(page);
   await page.goto("/jobs/job-failed-001");
@@ -239,6 +435,135 @@ test("opens restaurant summary and queues infra prepare", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Database Backup" })).toBeVisible();
   await page.getByRole("button", { name: "Prepare infra" }).click();
   await expect(page.getByText(/Infra prepare queued as job/)).toBeVisible();
+});
+
+test("safe auth update preserves hidden fields without advanced repair prompt", async ({
+  page
+}) => {
+  const authBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/platform/restaurants/33333333-3333-4333-8333-333333333333/auth-config",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "PUT") {
+        authBodies.push(JSON.parse(request.postData() ?? "{}"));
+      }
+      await route.continue();
+    }
+  );
+
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByRole("button", { name: "Save safe auth update" })).toBeVisible();
+
+  await page.locator('input[name="safe_access_token_ttl_seconds"]').fill("1200");
+  await page.locator('input[name="safe_refresh_token_ttl_seconds"]').fill("2592600");
+  await page.locator('input[name="safe_dev_static_otp_code"]').fill("654321");
+  await page.getByRole("button", { name: "Save safe auth update" }).click();
+
+  await expect(
+    page.getByText("Safe auth settings saved. Unchanged auth fields were preserved.")
+  ).toBeVisible();
+  await expect(page.getByText("Confirm auth repair")).toBeHidden();
+  expect(authBodies).toHaveLength(1);
+  expect(authBodies[0]).toMatchObject({
+    issuer: "smoke-provisioned.guestlantern.localhost",
+    audience: "tenant-smoke-provisioned-clients",
+    signing_algorithm: "HS256",
+    jwt_secret_ref: "secret://smoke-provisioned-jwt-secret",
+    access_token_ttl_seconds: 1200,
+    refresh_token_ttl_seconds: 2592600,
+    allow_dev_static_otp: true,
+    dev_static_otp_code: "654321"
+  });
+});
+
+test("advanced repair confirmation appears only for risky changed fields", async ({ page }) => {
+  const databaseBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/platform/restaurants/33333333-3333-4333-8333-333333333333/database-config",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "PUT") {
+        databaseBodies.push(JSON.parse(request.postData() ?? "{}"));
+      }
+      await route.continue();
+    }
+  );
+
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByRole("button", { name: "Save database config" })).toBeVisible();
+
+  await page
+    .locator('textarea[name="connection_options"]')
+    .fill(JSON.stringify({ pool_mode: "transaction", statement_timeout_ms: 5000 }, null, 2));
+  await expect(page.getByText("Confirm database repair")).toBeHidden();
+  await page.getByRole("button", { name: "Save database config" }).click();
+  await expect(
+    page.getByText(/Infra prepare (queued as job job-prepare-001|job job-prepare-001 finished)/)
+  ).toBeVisible();
+  expect(databaseBodies).toHaveLength(1);
+
+  await page.locator('input[name="db_name"]').fill("tenant_smoke_provisioned_next");
+  await expect(page.getByText("Confirm database repair")).toBeVisible();
+  await page.getByLabel("Advanced repair confirmation").fill("wrong-db");
+  await page.getByRole("button", { name: "Save database config" }).click();
+  await expect(
+    page.getByText("Type tenant_smoke_provisioned_next to confirm advanced database repair.")
+  ).toBeVisible();
+  expect(databaseBodies).toHaveLength(1);
+
+  await page.getByLabel("Advanced repair confirmation").fill("tenant_smoke_provisioned_next");
+  await page.getByRole("button", { name: "Save database config" }).click();
+  await expect(
+    page.getByText(/Infra prepare (queued as job job-prepare-001|job job-prepare-001 finished)/)
+  ).toBeVisible();
+  expect(databaseBodies).toHaveLength(2);
+});
+
+test("advanced auth repair confirmation blocks risky identity changes until confirmed", async ({
+  page
+}, testInfo) => {
+  const authBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/platform/restaurants/33333333-3333-4333-8333-333333333333/auth-config",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "PUT") {
+        authBodies.push(JSON.parse(request.postData() ?? "{}"));
+      }
+      await route.continue();
+    }
+  );
+
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByRole("button", { name: "Save auth config" })).toBeVisible();
+
+  const currentJwtSecretRef = await page.locator('input[name="jwt_secret_ref"]').inputValue();
+  const nextJwtSecretRef = `${currentJwtSecretRef}-${testInfo.project.name}-repair`;
+  await page.locator('input[name="jwt_secret_ref"]').fill(nextJwtSecretRef);
+  await expect(page.getByText("Confirm auth repair")).toBeVisible();
+  await page.getByLabel("Advanced repair confirmation").fill("wrong-slug");
+  await page.getByRole("button", { name: "Save auth config" }).click();
+  await expect(
+    page.getByText("Type smoke-provisioned to confirm advanced auth repair.")
+  ).toBeVisible();
+  expect(authBodies).toHaveLength(0);
+
+  await page.getByLabel("Advanced repair confirmation").fill("smoke-provisioned");
+  await page.getByRole("button", { name: "Save auth config" }).click();
+  await expect(
+    page.getByText(/Infra prepare (queued as job job-prepare-001|job job-prepare-001 finished)/)
+  ).toBeVisible();
+  expect(authBodies).toHaveLength(1);
+  expect(authBodies[0]).toMatchObject({
+    issuer: "smoke-provisioned.guestlantern.localhost",
+    audience: "tenant-smoke-provisioned-clients",
+    signing_algorithm: "HS256",
+    jwt_secret_ref: nextJwtSecretRef
+  });
 });
 
 test("repairs missing csrf cookie before saving restaurant config", async ({ page }) => {

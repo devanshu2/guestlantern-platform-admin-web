@@ -21,6 +21,7 @@ export type PlatformBootstrapResponse = {
   boundary: "platform_admin";
   database_plane: "control_plane";
   auth: PlatformAdminAuthSummary;
+  provisioning: ProvisionRestaurantCapabilities;
   current_admin: PlatformAdminPrincipal;
 };
 
@@ -114,6 +115,76 @@ export type ProvisionRestaurantRequest = {
   owner_phone_number: string;
   owner_email?: string;
   schema_version?: string;
+  domain?: ProvisionRestaurantDomainOverride;
+  database?: ProvisionRestaurantDatabaseOverride;
+  auth?: ProvisionRestaurantAuthOverride;
+};
+
+export type ProvisionRestaurantDomainOverride = {
+  host: string;
+  domain_type: "subdomain" | "custom" | string;
+  is_primary?: boolean;
+};
+
+export type ProvisionRestaurantDatabaseOverride = {
+  db_name?: string;
+  db_host?: string;
+  db_port?: number;
+  db_user_secret_ref?: string;
+  db_password_secret_ref?: string;
+  schema_version?: string;
+  connection_options?: Record<string, unknown>;
+};
+
+export type ProvisionRestaurantAuthOverride = {
+  issuer?: string;
+  audience?: string;
+  signing_algorithm?: string;
+  jwt_secret_ref?: string;
+  access_token_ttl_seconds?: number;
+  refresh_token_ttl_seconds?: number;
+  allow_dev_static_otp?: boolean;
+  dev_static_otp_code?: string | null;
+};
+
+export type ProvisionRestaurantCapabilities = {
+  environment: "development" | "production" | string;
+  allow_dev_static_otp_supported: boolean;
+  secret_store_backend: string;
+};
+
+export type ProvisionRestaurantPreview = {
+  tenant_id: TenantId;
+  slug: string;
+  managed_public_host: string;
+  public_host: string;
+  admin_host: string;
+  domain: {
+    managed_host: string;
+    host: string;
+    domain_type: "subdomain" | "custom" | string;
+    is_primary: boolean;
+  };
+  database: {
+    db_name: string;
+    db_host: string;
+    db_port: number;
+    db_user_secret_ref: string;
+    db_password_secret_ref: string;
+    schema_version: string;
+    connection_options: Record<string, unknown>;
+  };
+  auth: {
+    issuer: string;
+    audience: string;
+    signing_algorithm: string;
+    jwt_secret_ref: string;
+    access_token_ttl_seconds: number;
+    refresh_token_ttl_seconds: number;
+    allow_dev_static_otp: boolean;
+    dev_static_otp_code?: string | null;
+  };
+  capabilities: ProvisionRestaurantCapabilities;
 };
 
 export type ProvisionRestaurantJobReceipt = {

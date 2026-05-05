@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   authConfigSchema,
   databaseConfigSchema,
+  formatValidationIssue,
   parseJsonObject,
   provisionRestaurantSchema
 } from "@/lib/validation/platform";
@@ -133,5 +134,23 @@ describe("platform validation", () => {
       pool_mode: "transaction"
     });
     expect(() => parseJsonObject("[1,2,3]")).toThrow("JSON object");
+  });
+
+  it("formats schema issues with operator-facing field labels", () => {
+    const result = databaseConfigSchema.safeParse({
+      db_name: "postgres",
+      db_host: "127.0.0.1",
+      db_port: 16432,
+      db_user_secret_ref: "secret://tenant-user",
+      db_password_secret_ref: "secret://tenant-password",
+      connection_options: {}
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(formatValidationIssue(result.error, { db_name: "Database name" })).toBe(
+        "Database name: Use a tenant database name, not a reserved Postgres database."
+      );
+    }
   });
 });

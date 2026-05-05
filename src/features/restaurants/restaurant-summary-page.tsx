@@ -14,12 +14,14 @@ import { TableFrame } from "@/components/ui/table-frame";
 import { AuthConfigForm } from "@/features/restaurants/auth-config-form";
 import { DatabaseConfigForm } from "@/features/restaurants/database-config-form";
 import { DomainForm } from "@/features/restaurants/domain-form";
+import { SafeAuthUpdateForm } from "@/features/restaurants/safe-auth-update-form";
 import { TenantInfraLifecyclePanel } from "@/features/restaurants/tenant-infra-lifecycle-panel";
 import { platformApi } from "@/lib/api/client";
 import { useLoader } from "@/lib/api/hooks";
 import { errorMessage } from "@/lib/api/errors";
 import { formatDateTime } from "@/lib/api/status";
 import type { RestaurantInfraPrepareReceipt, RestaurantOperationalSummary } from "@/lib/api/types";
+import { useAuth } from "@/features/auth/auth-context";
 import { useState } from "react";
 
 function BoolValue({ value }: { value?: boolean | null }) {
@@ -28,6 +30,7 @@ function BoolValue({ value }: { value?: boolean | null }) {
 }
 
 export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }) {
+  const { bootstrap } = useAuth();
   const summary = useLoader<RestaurantOperationalSummary>(
     (signal) => platformApi(`/restaurants/${restaurantId}/operational-summary`, { signal }),
     [restaurantId]
@@ -55,6 +58,8 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
   }
 
   const data = summary.data;
+  const allowDevStaticOtpSupported =
+    bootstrap?.provisioning?.allow_dev_static_otp_supported ?? false;
 
   return (
     <div className="space-y-5">
@@ -206,72 +211,120 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
           </div>
 
           <Panel
-            title="Domains"
-            description="Active and inactive domain bindings. Creating a primary domain can promote it according to backend rules."
+            title="Safe updates"
+            description="Low-risk post-provision updates. These operations preserve hidden runtime fields and do not expose secret values."
           >
-            <div className="mb-4">
-              <TableFrame>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Host</th>
-                      <th>Type</th>
-                      <th>Primary</th>
-                      <th>Active</th>
-                      <th>Verified</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.domains.map((domain) => (
-                      <tr key={domain.id}>
-                        <td className="font-mono text-xs">{domain.host}</td>
-                        <td>{domain.domain_type}</td>
-                        <td>{domain.is_primary ? "Yes" : "No"}</td>
-                        <td>{domain.is_active ? "Yes" : "No"}</td>
-                        <td className="text-xs text-muted">{formatDateTime(domain.verified_at)}</td>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold text-ink">Domains</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Active and inactive bindings. Creating a primary domain can promote it according
+                    to backend rules.
+                  </p>
+                </div>
+                <TableFrame>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Host</th>
+                        <th>Type</th>
+                        <th>Primary</th>
+                        <th>Active</th>
+                        <th>Verified</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableFrame>
+                    </thead>
+                    <tbody>
+                      {data.domains.map((domain) => (
+                        <tr key={domain.id}>
+                          <td className="font-mono text-xs">{domain.host}</td>
+                          <td>{domain.domain_type}</td>
+                          <td>{domain.is_primary ? "Yes" : "No"}</td>
+                          <td>{domain.is_active ? "Yes" : "No"}</td>
+                          <td className="text-xs text-muted">
+                            {formatDateTime(domain.verified_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableFrame>
+                <DomainForm restaurantId={restaurantId} onSaved={summary.reload} />
+              </div>
+
+              <div className="space-y-4 border-t border-line pt-5">
+                <div>
+                  <h2 className="text-base font-semibold text-ink">
+                    Token TTL and development OTP
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Saves through the full auth-config API while preserving issuer, audience,
+                    algorithm, and secret ref.
+                  </p>
+                </div>
+                <SafeAuthUpdateForm
+                  restaurantId={restaurantId}
+                  config={data.auth_config}
+                  allowDevStaticOtpSupported={allowDevStaticOtpSupported}
+                  onSaved={summary.reload}
+                />
+              </div>
             </div>
-            <DomainForm restaurantId={restaurantId} onSaved={summary.reload} />
           </Panel>
 
           <Panel
-            title="Database config"
-            description="Repair tenant database runtime metadata. Saving marks the config pending until infra prepare verifies it."
+            title="Advanced repair"
+            description="Use only when runtime metadata is wrong or incomplete. Database repair queues infra prepare after saving; auth identity or secret-ref repair queues infra prepare when reconciliation is needed."
           >
-            {data.database_config ? (
-              <StatusBadge status={data.database_config.status} />
-            ) : (
-              <Alert tone="warning">
-                No database config returned. Use the form to create a repair record.
+            <div className="space-y-6">
+              <Alert tone="warning" title="Advanced repair can disrupt a running restaurant">
+                DB target changes require infra prepare and may point the restaurant at a different
+                database. Auth identity or secret-reference changes can break sessions or clients.
               </Alert>
-            )}
-            {data.database_config?.verification_error ? (
-              <Alert tone="danger" title="Last verification error">
-                {data.database_config.verification_error}
-              </Alert>
-            ) : null}
-            <div className="mt-4">
-              <DatabaseConfigForm
-                restaurantId={restaurantId}
-                config={data.database_config}
-                onSaved={summary.reload}
-              />
-            </div>
-          </Panel>
 
-          <Panel
-            title="Auth config"
-            description="Repair tenant JWT and development OTP runtime metadata. Secret values are never exposed, only secret refs."
-          >
-            <AuthConfigForm
-              restaurantId={restaurantId}
-              config={data.auth_config}
-              onSaved={summary.reload}
-            />
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold text-ink">Database config</h2>
+                  {data.database_config ? (
+                    <StatusBadge status={data.database_config.status} />
+                  ) : null}
+                </div>
+                {!data.database_config ? (
+                  <Alert tone="warning">
+                    No database config returned. Use the form to create a repair record.
+                  </Alert>
+                ) : null}
+                {data.database_config?.verification_error ? (
+                  <Alert tone="danger" title="Last verification error">
+                    {data.database_config.verification_error}
+                  </Alert>
+                ) : null}
+                <DatabaseConfigForm
+                  restaurantId={restaurantId}
+                  restaurantSlug={data.restaurant.slug}
+                  config={data.database_config}
+                  onSaved={summary.reload}
+                  queuePrepareAfterSave
+                />
+              </div>
+
+              <div className="space-y-4 border-t border-line pt-5">
+                <div>
+                  <h2 className="text-base font-semibold text-ink">Auth config</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Repair tenant JWT identity and secret references. Secret values are never
+                    exposed, only secret refs.
+                  </p>
+                </div>
+                <AuthConfigForm
+                  restaurantId={restaurantId}
+                  restaurantSlug={data.restaurant.slug}
+                  config={data.auth_config}
+                  onSaved={summary.reload}
+                  queuePrepareOnRuntimeChange
+                />
+              </div>
+            </div>
           </Panel>
 
           <Panel
