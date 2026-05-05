@@ -256,7 +256,6 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
             ) : null}
             <div className="mt-4">
               <DatabaseConfigForm
-                key={data.database_config?.updated_at ?? "empty-db"}
                 restaurantId={restaurantId}
                 config={data.database_config}
                 onSaved={summary.reload}
@@ -269,7 +268,6 @@ export function RestaurantSummaryPage({ restaurantId }: { restaurantId: string }
             description="Repair tenant JWT and development OTP runtime metadata. Secret values are never exposed, only secret refs."
           >
             <AuthConfigForm
-              key={data.auth_config?.updated_at ?? "empty-auth"}
               restaurantId={restaurantId}
               config={data.auth_config}
               onSaved={summary.reload}

@@ -1,7 +1,7 @@
 "use client";
 
 import { Save } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, TextAreaField } from "@/components/ui/field";
@@ -39,6 +39,10 @@ export function DatabaseConfigForm({
   const [form, setForm] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setForm(initial);
+  }, [initial]);
 
   function update(name: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [name]: value }));

@@ -260,6 +260,54 @@ test("repairs missing csrf cookie before saving restaurant config", async ({ pag
   await expect(page.getByText("Security check failed")).toBeHidden();
 });
 
+test("keeps restaurant config forms mounted during save refresh", async ({ page }) => {
+  const summaryUrl =
+    "**/api/platform/restaurants/33333333-3333-4333-8333-333333333333/operational-summary";
+  let mutateSummaryTimestamps = false;
+
+  await page.route(summaryUrl, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    if (mutateSummaryTimestamps) {
+      body.database_config.updated_at = "2026-05-02T17:30:00Z";
+      body.auth_config.updated_at = "2026-05-02T17:31:00Z";
+    }
+    await route.fulfill({ response, json: body });
+  });
+
+  await login(page);
+  await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByRole("button", { name: "Save database config" })).toBeVisible();
+
+  await page
+    .getByLabel("Database name")
+    .evaluate((element) => element.setAttribute("data-remount-sentinel", "database"));
+  await page
+    .getByLabel("Issuer")
+    .evaluate((element) => element.setAttribute("data-remount-sentinel", "auth"));
+
+  mutateSummaryTimestamps = true;
+
+  await page.getByRole("button", { name: "Save database config" }).click();
+  await expect(
+    page.getByText(
+      "Database config saved. Backend marks it pending until infra prepare verifies it."
+    )
+  ).toBeVisible();
+  await expect(page.getByLabel("Database name")).toHaveAttribute(
+    "data-remount-sentinel",
+    "database"
+  );
+  await expect(page.getByText("Loading restaurant operational summary")).toBeHidden();
+
+  await page.getByRole("button", { name: "Save auth config" }).click();
+  await expect(
+    page.getByText("Auth config saved. Tenant JWT and development OTP settings were updated.")
+  ).toBeVisible();
+  await expect(page.getByLabel("Issuer")).toHaveAttribute("data-remount-sentinel", "auth");
+  await expect(page.getByText("Loading restaurant operational summary")).toBeHidden();
+});
+
 test("queues a database backup lifecycle operation with step-up", async ({ page }) => {
   await login(page);
   await page.goto("/restaurants/33333333-3333-4333-8333-333333333333");
